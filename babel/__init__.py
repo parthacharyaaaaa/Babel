@@ -10,7 +10,7 @@ app = Flask(__name__)
 app.config["SECRET_KEY"] = SECRET_KEY
 app.config["PERMANENT_SESSION_LIFETIME"] = SESSION_LIFETIME
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = TRACK_MODIFICATIONS
-
+app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URI
 db = SQLAlchemy(app)
 migrate = Migrate(app)
 login_manager = LoginManager(app)
