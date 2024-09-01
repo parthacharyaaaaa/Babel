@@ -1,0 +1,61 @@
+/* DEPENDENCIES */
+@import url('https://fonts.googleapis.com/css2?family=SUSE:wght@100..800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&family=SUSE:wght@100..800&display=swap');
+
+/* CSS RESET */
+*{
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* VARIABLES */
+:root{
+    /* Colors */
+    --PRIMARY-BG: #0d1b2a;
+    --SECONDARY-BG: #1b263b;
+    --PRIMARY-TEXT-COLOR: #ffffff;
+    --SECONDARY-TEXT-COLOR: #e0e1dd;
+    --TERTIARY-TEXT-COLOR: #778da9;
+    --BORDER-COLOR: #415a77;
+    
+    /* Fonts */
+    --MAIN-FONT: "SUSE", sans-serif;
+    --SECONDARY-FONT: "Montserrat", sans-serif;
+    
+    --FSIZE-XL: 2rem;
+    --FSIZE-L: 1.5rem;
+    --FSIZE: 1rem;
+    --FSIZE-S: 0.8rem;
+    --FSIZE-XS: 0.5rem;
+}
+
+/* HEADER */
+header{
+    background-color: var(--PRIMARY-BG);
+    padding: 1rem;
+
+    display: flex;
+}
+
+body{
+    background-color: var(--PRIMARY-BG);
+    font-size: var(--FSIZE);
+    color: var(--PRIMARY-TEXT-COLOR);
+    font-family: var(--MAIN-FONT);
+}
+
+main{
+    display: flex;
+    flex-direction: column;
+    /* align-items: space-between; */
+}
+
+/* FOOTER */
+footer{
+    background-color: var(--PRIMARY-BG);
+    padding: 1rem;
+
+    display: flex;
+    justify-content: center;
+}
