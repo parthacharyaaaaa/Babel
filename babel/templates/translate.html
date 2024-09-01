@@ -2,7 +2,37 @@
 {% block title %} Babel | Translate {% endblock %}
 
 {% block depends %}
+<link rel="stylesheet" type="text/css" href="{{url_for('static', filename='styles/func-pages.css')}}" />
 {% endblock %}
 
 {% block content %}
+<main>
+    <section class="info" id="info">
+        Easily translate your text in just a few clicks! Enter your original text in the left box, choose the language
+        you want to translate from, then select your desired translation language on the right. Your translated text
+        will appear instantly, helping you bridge the gap between languages with ease.
+    </section>
+    <section class="wrapper" id="wrapper">
+        <div class="container" id="og-text-container">
+        <input list="source-language" id="source-languages" name="source-language" placeholder="Select or type a language (auto)">
+            <datalist id = "source-language" class="language-list">
+
+            </datalist>
+        </input>
+            <textarea class="textbox-big" name="original" id="original"
+                placeholder="Enter the text you wish to translate"></textarea>
+        </div>
+        <div class="container" id="translated-text-container">
+            <input list="dest-language" id="source-languages" name="source-language" placeholder="Select or type a language">
+            <datalist id = "dest-language" class="language-list">
+
+            </datalist>
+        </input>
+            <div class="textbox-big" id="translated" name="translated"
+                aria-placeholder="Your translated text will come here"></div>
+        </div>
+    </section>
+</main>
+
+<script type="text/javascript" src="{{url_for('static', filename = 'scripts/load_languages.js')}}"></script>
 {% endblock %}
