@@ -3,7 +3,7 @@ from flask import url_for, redirect, render_template, jsonify, request
 from babel import app, db, bcrypt, login_manager
 from babel.models import *
 from babel.config import *
-
+from babel.errors import *
 from googletrans import Translator
 
 #Login Configurations
@@ -62,16 +62,37 @@ def transcript_text():
 
 @app.route("/translate-text", methods = ["POST"])
 def translate_text():
-    original_text = request.form["text"]
-    requested_language = request.form["lang"]
-    translator = Translator()
+    try:
+        #Ensure response integrity
+        if not request.is_json:
+            raise Unexpected_Request_Format("Response is not JSON serialized")
+        
+        translation_request = request.get_json(force=True, silent=False)
 
-    translated_text = translator.translate(text = original_text, dest = "lang")
-    print(translated_text)
+        original_text : str = translation_request["text"]
+        dest_language : str = translation_request["dest"]
+        src_language : str = translation_request.get("src", None)
+
+        if original_text.strip() == "" or dest_language.strip() == "":
+            raise ValueError("Invalid Request")
+        
+        translator = Translator()
+
+        translation_metadata = translator.translate(text = original_text, dest = dest_language, src = src_language or 'auto')
+        translated_text, translation_src = translation_metadata.text, translation_metadata.src
+        print(translation_src)
+
+        return jsonify({"translated-text" : translated_text, "src" : translation_src}), 200
+
+    except Unexpected_Request_Format as e:
+        print("NOT JSON")
+        return jsonify({"error" : "yeah yeah"}), 400
+    except KeyError as e:
+        print("JSON NOT PROPER KWARGS")
+        return jsonify("Invalid Request"), 400
 
 @app.route("/fetch-languages", methods = ["GET"])
 def fetch_languages():
     available_languages = {"auto" : "auto-detect"}
     available_languages.update(AVAILABLE_LANGUAGES)
-    print(available_languages)
     return jsonify({"lang" : available_languages}), 200
