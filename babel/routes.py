@@ -64,23 +64,30 @@ def transcript_text():
 def translate_text():
     try:
         #Ensure response integrity
-        if not request.is_json:
+        if not request.is_json:         #JSON Serialize check
             raise Unexpected_Request_Format("Response is not JSON serialized")
         
-        translation_request = request.get_json(force=True, silent=False)
+        translation_request = request.get_json(force=True, silent=False)            #Parsing JSON response, silent is kept at False just as a second measure in case .is_json fails
 
         original_text : str = translation_request["text"]
-        dest_language : str = translation_request["dest"]
+        dest_language : str = translation_request["dest"].lower()
         src_language : str = translation_request.get("src", None)
 
+        #Validating strings
         if original_text.strip() == "" or dest_language.strip() == "":
             raise ValueError("Invalid Request")
-        
+
+        #Validating requested languages
+        if dest_language not in AVAILABLE_LANGUAGES:
+            return jsonify({"error" : "Destination Language Not Found"}), 404
+        if src_language is not None and src_language.lower() not in AVAILABLE_LANGUAGES:
+            return jsonify({"error" : "Source Language Not Found"}), 404
+
+        #Initialize Translation Process
         translator = Translator()
 
         translation_metadata = translator.translate(text = original_text, dest = dest_language, src = src_language or 'auto')
         translated_text, translation_src = translation_metadata.text, translation_metadata.src
-        print(translation_src)
 
         return jsonify({"translated-text" : translated_text, "src" : translation_src}), 200
 
