@@ -72,7 +72,8 @@ def translate_text():
         original_text : str = translation_request["text"]
         dest_language : str = translation_request["dest"].lower()
         src_language : str = translation_request.get("src", None)
-
+        src_language = None if src_language.strip() == "" else src_language.lower()
+        
         #Validating strings
         if original_text.strip() == "" or dest_language.strip() == "":
             raise ValueError("Invalid Request")
@@ -80,7 +81,7 @@ def translate_text():
         #Validating requested languages
         if dest_language not in AVAILABLE_LANGUAGES:
             return jsonify({"error" : "Destination Language Not Found"}), 404
-        if src_language is not None and src_language.lower() not in AVAILABLE_LANGUAGES:
+        if src_language is not None and src_language not in AVAILABLE_LANGUAGES:
             return jsonify({"error" : "Source Language Not Found"}), 404
 
         #Initialize Translation Process
