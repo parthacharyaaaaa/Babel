@@ -4,6 +4,7 @@ from babel import app, db, bcrypt, login_manager
 from babel.models import *
 from babel.config import *
 from babel.errors import *
+from babel.transciber import getAudioTranscription
 from googletrans import Translator
 
 #Login Configurations
