@@ -1,5 +1,5 @@
 from flask import url_for, redirect, render_template, jsonify, request
-
+import time
 from babel import app, db, bcrypt, login_manager
 from babel.models import *
 from babel.config import *
@@ -73,7 +73,7 @@ def translate_text():
         dest_language : str = translation_request["dest"].lower()
         src_language : str = translation_request.get("src", None)
         src_language = None if src_language.strip() == "" else src_language.lower()
-        
+
         #Validating strings
         if original_text.strip() == "" or dest_language.strip() == "":
             raise ValueError("Invalid Request")
@@ -85,12 +85,15 @@ def translate_text():
             return jsonify({"error" : "Source Language Not Found"}), 404
 
         #Initialize Translation Process
+        start_time = time.time()
         translator = Translator()
 
         translation_metadata = translator.translate(text = original_text, dest = dest_language, src = src_language or 'auto')
-        translated_text, translation_src = translation_metadata.text, translation_metadata.src
 
-        return jsonify({"translated-text" : translated_text, "src" : translation_src}), 200
+        translated_text, translation_src = translation_metadata.text, translation_metadata.src
+        time_taken = time.time() - start_time
+
+        return jsonify({"translated-text" : translated_text, "src" : translation_src, "time" : time_taken}), 200
 
     except Unexpected_Request_Format as e:
         print("NOT JSON")
