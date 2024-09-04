@@ -1,5 +1,5 @@
 import requests, time, os
-from babel.config import AAI_API_KEY, UPLOAD_URL, TRANSCRIPT_URL
+from babel.config import aai_config
 from requests import HTTPError
 from typing import Union
 
@@ -22,7 +22,7 @@ def upload_audio(headers : dict, file_path : str) -> str:
     
     try:
         with open(file_path, 'rb') as file:
-            response = requests.post(UPLOAD_URL, headers=headers, files={'file': file})
+            response = requests.post(aai_config.UPLOAD_URL, headers=headers, files={'file': file})
         response.raise_for_status()
         return response.json()['upload_url']
 
@@ -48,7 +48,7 @@ def transcribe_audio(headers : dict, audio_url : str) -> Union[str, int]:
         raise TypeError("Audio URL must be a string instance")
     
     try:
-        response = requests.post(TRANSCRIPT_URL, json={'audio_url': audio_url}, headers=headers)
+        response = requests.post(aai_config.TRANSCRIPT_URL, json={'audio_url': audio_url}, headers=headers)
         response.raise_for_status()
         return response.json()['id']
     except HTTPError as e:
@@ -56,14 +56,14 @@ def transcribe_audio(headers : dict, audio_url : str) -> Union[str, int]:
     except KeyError as e:
         print("Unexpected response format from AssemblyAI (Key 'id' not found in JSON serialized form)\n{}".format(response.json()))
 
-def check_transcription_status(headers : dict, transcript_id : Union[str, int], trancript_url : str = TRANSCRIPT_URL) -> str:
+def check_transcription_status(headers : dict, transcript_id : Union[str, int], trancript_url : str = aai_config.TRANSCRIPT_URL) -> str:
     """Checks the status of the transcription"""
 
     if not (isinstance(trancript_url, str) and isinstance(transcript_id, (int, str)) and isinstance(headers, dict)):
         raise TypeError("Invalid types provided")
     
     try:
-        response = requests.get(f'{TRANSCRIPT_URL}/{transcript_id}', headers=headers)
+        response = requests.get(f'{aai_config.TRANSCRIPT_URL}/{transcript_id}', headers=headers)
         response.raise_for_status()
         return response.json()
     except HTTPError as e:
@@ -71,7 +71,7 @@ def check_transcription_status(headers : dict, transcript_id : Union[str, int], 
     except KeyError as e:
         print("Unexpected response format from AssemblyAI (Key 'status' not found in JSON serialized form)\n{}".format(response.json()))
 
-def getAudioTranscription(filepath : str, api_key : str = AAI_API_KEY, max_attempts : int = 50) -> dict:
+def getAudioTranscription(filepath : str, api_key : str, max_attempts : int = 50) -> dict:
     '''Performs the actual transcription for a given audio file
     params:
     filepath: The path of the audio file to be transcribed
@@ -81,7 +81,7 @@ def getAudioTranscription(filepath : str, api_key : str = AAI_API_KEY, max_attem
     '''
     #Initialize headers
     headers = {
-        "Authorization" : AAI_API_KEY,
+        "Authorization" : aai_config.AAI_API_KEY,
         "Content-Type" : "application/json"
     }
 

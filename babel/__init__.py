@@ -4,13 +4,11 @@ from flask_login import LoginManager
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 
-from babel.config import *
+from babel.config import flask_config
 
 app = Flask(__name__)
-app.config["SECRET_KEY"] = SECRET_KEY
-app.config["PERMANENT_SESSION_LIFETIME"] = SESSION_LIFETIME
-app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = TRACK_MODIFICATIONS
-app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URI
+app.config.from_object(flask_config)
+
 db = SQLAlchemy(app)
 migrate = Migrate(app)
 login_manager = LoginManager(app)
