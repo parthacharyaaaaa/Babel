@@ -11,5 +11,11 @@ TRACK_MODIFICATIONS = os.environ.get("TRACK_MODIFICATIONS")
 PORT = os.environ.get("PORT")
 HOST = os.environ.get("HOST")
 
+#Translation
 with open(os.environ.get("AVAILABLE_LANGUAGES"), "r") as languages_filepath:
     AVAILABLE_LANGUAGES = json.load(languages_filepath)
+
+# Transcription
+UPLOAD_URL = 'https://api.assemblyai.com/v2/upload'
+TRANSCRIPT_URL = 'https://api.assemblyai.com/v2/transcript'
+AAI_API_KEY = os.environ.get("ASSEMBMLY_AI_API_KEY")
