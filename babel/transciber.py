@@ -71,7 +71,7 @@ def check_transcription_status(headers : dict, transcript_id : Union[str, int], 
     except KeyError as e:
         print("Unexpected response format from AssemblyAI (Key 'status' not found in JSON serialized form)\n{}".format(response.json()))
 
-def getAudioTranscription(filepath : str, api_key : str, max_attempts : int = 50) -> dict:
+def getAudioTranscription(filepath : str, api_key : str = aai_config.AAI_API_KEY, max_attempts : int = 50, poll_interval : int = 4) -> dict:
     '''Performs the actual transcription for a given audio file
     params:
     filepath: The path of the audio file to be transcribed
@@ -81,7 +81,7 @@ def getAudioTranscription(filepath : str, api_key : str, max_attempts : int = 50
     '''
     #Initialize headers
     headers = {
-        "Authorization" : aai_config.AAI_API_KEY,
+        "Authorization" : api_key,
         "Content-Type" : "application/json"
     }
 
@@ -101,7 +101,7 @@ def getAudioTranscription(filepath : str, api_key : str, max_attempts : int = 50
             print(result)
             raise RuntimeError("Transcription Failed")
         
-        time.sleep(5)
+        time.sleep(poll_interval)
     
     #Loop exit indicates overflow of maximum attempts
     raise Exception()
