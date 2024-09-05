@@ -49,7 +49,7 @@ def fetch_history():
     pass
 
 #Transcriptions and Translations
-@app.route("/trancript", methods = ["GET"])
+@app.route("/transcript", methods = ["GET"])
 def transcript():
     return render_template("transcript.html")
 
@@ -57,9 +57,21 @@ def transcript():
 def translate():
     return render_template("translate.html")
 
-@app.route("/transcript-text", methods = ["POST"])
-def transcript_text():
-    pass
+@app.route("/transcript-speech", methods = ["POST"])
+def transcript_speech():
+    audio_file = request.files.get("audio-file", None)
+    if audio_file is None:
+        raise Unexpected_Request_Format("Audio File Not Found in Request Object\nAt:POST /transcript-speech")
+    #Add file validation logic here
+    #Saving file
+    filepath : str = os.path.join(app.config["UPLOAD_FOLDER"], audio_file.filename)
+    audio_file.save(filepath)
+
+    #Transcripting audio
+    print(filepath)
+    result = getAudioTranscription(filepath)
+    return jsonify({"text" : result["text"], "confidence" : result["confidence"]}), 200
+
 
 @app.route("/translate-text", methods = ["POST"])
 def translate_text():
