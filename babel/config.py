@@ -5,13 +5,15 @@ import json
 load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 
 class Flask_Config:
-    """Base configuration."""
+    """Flask app configuration."""
     SECRET_KEY = os.environ.get("SESSION_KEY")
     SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URI")
     TRACK_MODIFICATIONS = os.environ.get("TRACK_MODIFICATIONS")
     PORT = os.environ.get("PORT")
     HOST = os.environ.get("HOST")
     SESSION_LIFETIME = timedelta(days=int(os.environ.get("SESSION_LIFETIME")))
+    UPLOAD_FOLDER = os.environ.get("UPLOAD_FOLDER")
+    MAX_CONTENT_LENGTH = os.environ.get("MAX_CONTENT_LENGTH")
 
 class AssemblyAI_Config:
     """AssemblyAI configuration."""
