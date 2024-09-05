@@ -13,7 +13,7 @@ class Flask_Config:
     HOST = os.environ.get("HOST")
     SESSION_LIFETIME = timedelta(days=int(os.environ.get("SESSION_LIFETIME")))
     UPLOAD_FOLDER = os.environ.get("UPLOAD_FOLDER")
-    MAX_CONTENT_LENGTH = os.environ.get("MAX_CONTENT_LENGTH")
+    MAX_CONTENT_LENGTH = int(os.environ.get("MAX_CONTENT_LENGTH"))
 
 class AssemblyAI_Config:
     """AssemblyAI configuration."""
