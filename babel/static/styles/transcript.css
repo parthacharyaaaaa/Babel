@@ -1,0 +1,51 @@
+.wrapper {
+    display: flex;
+    flex-flow: column nowrap;
+
+    justify-content: center;
+    align-items: center;
+
+    padding: 1rem;
+    gap: 1rem;
+}
+
+.wrapper>.audio-dropper {
+    display: none;
+}
+
+.wrapper>label {
+    border-radius: 10px;
+    border: 1px solid var(--BORDER-COLOR);
+    padding: 1rem;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 80rem;
+    height: 8rem;
+
+    cursor: pointer;
+
+    transition: all 250ms;
+    &:is(:hover, :focus){
+        background-color: var(--SECONDARY-BG);
+    }
+
+    &:active{
+        background-color: var(--BORDER-COLOR);
+    }
+}
+
+.wrapper span{
+    font-size: var(--FSIZE-XL);
+    color: var(--BORDER-COLOR);
+    opacity: 0.6;
+    font-weight: bolder;
+}
+
+.wrapper>.transcription-output {
+    width: 80rem;
+    height: 30rem;
+    border: 1px solid var(--BORDER-COLOR);
+    border-radius: 10px;
+}
