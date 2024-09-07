@@ -1,9 +1,11 @@
 import requests, time, os
 from babel.config import aai_config
 from requests import HTTPError
-from typing import Union
+from typing import Union, Optional
 
-def upload_audio(headers : dict, file_path : str) -> str:
+from babel.errors import Unexpected_Request_Format, Unexpected_Response_Format, API_TIMEOUT_ERROR
+
+def upload_audio(headers : dict, file_path : str) -> Optional[str]:
     """Uploads audio file to AssemblyAI
 
     params:
@@ -20,19 +22,20 @@ def upload_audio(headers : dict, file_path : str) -> str:
     if not file_path.endswith((".mp3", ".wav", ".aac")):
         raise ValueError("Filepath must be an audio file, with format as mp3, aac, or wav")
     
-    try:
-        with open(file_path, 'rb') as file:
-            response = requests.post(aai_config.UPLOAD_URL, headers=headers, files={'file': file})
-        response.raise_for_status()
-        return response.json()['upload_url']
+    # try:
+    with open(file_path, 'rb') as file:
+        response = requests.post(aai_config.UPLOAD_URL, headers=headers, files={'file': file})
+    response.raise_for_status()
+    print(response.json())
+    return response.json()['upload_url']
 
-    except HTTPError as e:
-        print(f"Connection Error with AssemblyAI\nCode: {response.status_code}")
-    except KeyError as e:
-        print("Unexpected response format from AssemblyAI")
-        print("Response:\n{}".format(response.json()))
-    except Exception as e:
-        print("An error occured: ", e)
+    # except HTTPError as e:
+    #     raise HTTPError(f"Connection Error with AssemblyAI\nCode: {response.status_code}\nMessage: {response.json()}")
+    # except KeyError as e:
+    #     print("Unexpected response format from AssemblyAI")
+    #     print("Response:\n{}".format(response.json()))
+    # except Exception as e:
+    #     print("An error occured: ", e)
 
 def transcribe_audio(headers : dict, audio_url : str) -> Union[str, int]:
     """Submits transcription request and retrieves the trancript ID
@@ -72,20 +75,30 @@ def check_transcription_status(headers : dict, transcript_id : Union[str, int], 
         print("Unexpected response format from AssemblyAI (Key 'status' not found in JSON serialized form)\n{}".format(response.json()))
 
 def getAudioTranscription(filepath : str, api_key : str = aai_config.AAI_API_KEY, max_attempts : int = 50, poll_interval : int = 4) -> dict:
-    '''Performs the actual transcription for a given audio file
+    ''' ### Performs the actual transcription for a given audio file
+
     params:
+
     filepath: The path of the audio file to be transcribed
     key: The API key for Assembly AI
+    max_attempts: Number of times to poll AssemblyAI's API endpoint before exiting the function
+    poll_interval: Time interval to wait between consecutive polls
     
     returns: dictionary object with text attribute set to the transcripted text and confidence attribute set to the average confidence of the words
     '''
     #Initialize headers
+    if not api_key.isalnum():
+        raise ValueError(f"ASSEMBLY-AI API KEY IS INVALID. MUST BE STRINCTLY ALPHA-NUMERIC, NOT {api_key}")
+
     headers = {
         "Authorization" : api_key,
         "Content-Type" : "application/json"
     }
 
     audio_url = upload_audio(headers, filepath)
+    if audio_url is None:
+        raise HTTPError("Max tries exceeded with AssemblyAI")
+    
     transcription_id = transcribe_audio(headers, audio_url)
 
     
@@ -104,4 +117,4 @@ def getAudioTranscription(filepath : str, api_key : str = aai_config.AAI_API_KEY
         time.sleep(poll_interval)
     
     #Loop exit indicates overflow of maximum attempts
-    raise Exception()
+    raise API_TIMEOUT_ERROR(endpoint=aai_config.TRANSCRIPT_URL)
