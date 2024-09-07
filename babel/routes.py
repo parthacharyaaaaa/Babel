@@ -62,6 +62,8 @@ def transcript_speech():
     audio_file = request.files.get("audio-file", None)
     if audio_file is None:
         raise Unexpected_Request_Format("Audio File Not Found in Request Object\nAt:POST /transcript-speech")
+    
+    starting_time = time.time()
     #Add file validation logic here
     #Saving file
     filepath : str = os.path.join(app.config["UPLOAD_FOLDER"], audio_file.filename)
@@ -70,7 +72,7 @@ def transcript_speech():
     #Transcripting audio
     print(filepath)
     result = getAudioTranscription(filepath)
-    return jsonify({"text" : result["text"], "confidence" : result["confidence"]}), 200
+    return jsonify({"text" : result["text"], "confidence" : result["confidence"], "time" : time.time() - starting_time}), 200
 
 
 @app.route("/translate-text", methods = ["POST"])
@@ -94,7 +96,7 @@ def translate_text():
         #Validating requested languages
         if dest_language not in AVAILABLE_LANGUAGES:
             return jsonify({"error" : "Destination Language Not Found"}), 404
-        if src_language is not None and src_language not in AVAILABLE_LANGUAGES:
+        if src_language is not None and src_language not in AVAILABLE_LANGUAGES and src_language != "auto":
             return jsonify({"error" : "Source Language Not Found"}), 404
 
         #Initialize Translation Process
