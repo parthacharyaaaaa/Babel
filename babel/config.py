@@ -4,6 +4,8 @@ from dotenv import load_dotenv
 import json
 load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 
+from babel.errors import Missing_Configuration_Error
+
 class Flask_Config:
     """Flask app configuration."""
     SECRET_KEY = os.environ.get("SESSION_KEY")
@@ -19,7 +21,13 @@ class AssemblyAI_Config:
     """AssemblyAI configuration."""
     UPLOAD_URL = 'https://api.assemblyai.com/v2/upload'
     TRANSCRIPT_URL = 'https://api.assemblyai.com/v2/transcript'
-    AAI_API_KEY = os.environ.get("ASSEMBLY_AI_API_KEY")
+    AAI_API_KEY = os.environ.get("ASSEMBLY_AI_API_KEY", None)
+
+    if AAI_API_KEY is None:
+        raise Missing_Configuration_Error(f"ASSEMBLY-AI API KEY NOT FOUND! SEE CLASS AssemblyAI_Config IN {__file__}")
+    
+    if not AAI_API_KEY.isalnum():
+        raise ValueError(f"ASSEMBLY-AI API KEY IS INVALID. MUST BE STRINCTLY ALPHA-NUMERIC, NOT {AAI_API_KEY}")
 
 #Translation
 with open(os.environ.get("AVAILABLE_LANGUAGES"), "r") as languages_filepath:
