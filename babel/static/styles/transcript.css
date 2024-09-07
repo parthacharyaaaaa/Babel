@@ -51,3 +51,8 @@
 
     padding: 1rem;
 }
+
+.confidence{
+    background-color: var(--SECONDARY-BG);
+    color: var(--TERTIARY-TEXT-COLOR);
+}
