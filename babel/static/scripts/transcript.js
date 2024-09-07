@@ -15,8 +15,9 @@ document.addEventListener("DOMContentLoaded", async function(event) {
 
             let output_box = document.getElementById("transcription-output");
             let confidence_box = document.getElementById("confidence");
-            output_box.innerText = "";
-            confidence_box.innerText = "";
+            confidence_box.style.padding = '0'; 
+            output_box.innerText = ""; output_box.innerHTML = "";
+            confidence_box.innerText = ""; confidence_box.innerHTML = "";
             
             const file = document.getElementById("audio-dropper").files[0];
             if (!file){
@@ -32,6 +33,10 @@ document.addEventListener("DOMContentLoaded", async function(event) {
             console.log("Selected File: " + file)
             let audioForm = new FormData();
             audioForm.append("audio-file", file);
+            
+            let throbber = document.createElement('div');
+            throbber.classList.add("spinner");
+            output_box.appendChild(throbber);
 
             const response = await fetch("/transcript-speech", {
                 method : "POST",
@@ -50,8 +55,10 @@ document.addEventListener("DOMContentLoaded", async function(event) {
                 throw new Error("Unexpected response format :(");
             }
 
+            output_box.innerHTML = "";
 
             output_box.innerText = transcript;
+            confidence_box.style.padding = '1rem'; 
             confidence_box.innerText = `Confidence: ${(confidence*100).toFixed(2)}%`;
         }
         catch (error){
