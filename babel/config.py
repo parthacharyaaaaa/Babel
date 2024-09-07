@@ -1,21 +1,27 @@
 from datetime import timedelta
 import os
-from dotenv import load_dotenv
 import json
+
+from dotenv import load_dotenv
 load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 
 from babel.errors import Missing_Configuration_Error
 
 class Flask_Config:
     """Flask app configuration."""
-    SECRET_KEY = os.environ.get("SESSION_KEY")
-    SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URI")
-    TRACK_MODIFICATIONS = os.environ.get("TRACK_MODIFICATIONS")
-    PORT = os.environ.get("PORT")
-    HOST = os.environ.get("HOST")
-    SESSION_LIFETIME = timedelta(days=int(os.environ.get("SESSION_LIFETIME")))
-    UPLOAD_FOLDER = os.environ.get("UPLOAD_FOLDER")
-    MAX_CONTENT_LENGTH = int(os.environ.get("MAX_CONTENT_LENGTH"))
+    try:
+        SECRET_KEY = os.environ["SESSION_KEY"]
+        SQLALCHEMY_DATABASE_URI = os.environ["DATABASE_URI"]
+        TRACK_MODIFICATIONS = os.environ.get("TRACK_MODIFICATIONS", False)
+        PORT = os.environ["PORT"]
+        HOST = os.environ["HOST"]
+        SESSION_LIFETIME = timedelta(days=int(os.environ["SESSION_LIFETIME"]))
+        UPLOAD_FOLDER = os.environ["UPLOAD_FOLDER"]
+        MAX_CONTENT_LENGTH = int(os.environ["MAX_CONTENT_LENGTH"])
+    except KeyError as e:
+        raise Missing_Configuration_Error(f"FAILED TO SETUP CONFIGURATIONS FOR FLASK APPLICATION AS ENVIRONMENT VARIABLES WERE NOT FOUND (SEE: class Flask_Config at '{__file__}')")
+    except TypeError as e:
+        raise TypeError(f"FAILURE IN CONFIGURING ENVIRONMENT VARIABLE(S) OF TYPE: INT (SEE: class Flask_Config at '{__file__}')")
 
 class AssemblyAI_Config:
     """AssemblyAI configuration."""
@@ -30,8 +36,16 @@ class AssemblyAI_Config:
         raise ValueError(f"ASSEMBLY-AI API KEY IS INVALID. MUST BE STRINCTLY ALPHA-NUMERIC, NOT {AAI_API_KEY}")
 
 #Translation
-with open(os.environ.get("AVAILABLE_LANGUAGES"), "r") as languages_filepath:
-    AVAILABLE_LANGUAGES = json.load(languages_filepath)
+try:
+    with open(os.environ["AVAILABLE_LANGUAGES"], "r") as languages_filepath:
+        AVAILABLE_LANGUAGES = json.load(languages_filepath)
+        if not isinstance(AVAILABLE_LANGUAGES, dict):
+            raise ValueError("INVALID FORMAT DETECTED IN file: lang.json (NOT KEY-VALUE PAIRS)")
+except KeyError:
+    raise Missing_Configuration_Error("FAILURE IN LOADING JSON CONFIGURATIONS FILEPATH FROM ENVIRONMENT VARIABLES (lang.json)")
+except FileNotFoundError:
+    raise Missing_Configuration_Error("FAILURE IN LOCATING JSON CONFIGURATIONS FILE (lang.json)")
+
 
 flask_config = Flask_Config()
 aai_config = AssemblyAI_Config()
