@@ -4,13 +4,12 @@ import json
 
 from dotenv import load_dotenv
 load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
-
 from babel.errors import Missing_Configuration_Error
 
 class Flask_Config:
     """Flask app configuration."""
     try:
-        SECRET_KEY = os.environ["SESSION_KEY"]
+        SECRET_KEY = os.environ["SECRET_KEY"]
         SQLALCHEMY_DATABASE_URI = os.environ["DATABASE_URI"]
         TRACK_MODIFICATIONS = os.environ.get("TRACK_MODIFICATIONS", False)
         PORT = os.environ["PORT"]
