@@ -1,6 +1,5 @@
 import requests, time, os
 from babel.config import aai_config
-from requests import HTTPError
 from typing import Union, Optional
 
 from babel.errors import Unexpected_Request_Format, Unexpected_Response_Format, API_TIMEOUT_ERROR
@@ -29,14 +28,6 @@ def upload_audio(headers : dict, file_path : str) -> Optional[str]:
     print(response.json())
     return response.json()['upload_url']
 
-    # except HTTPError as e:
-    #     raise HTTPError(f"Connection Error with AssemblyAI\nCode: {response.status_code}\nMessage: {response.json()}")
-    # except KeyError as e:
-    #     print("Unexpected response format from AssemblyAI")
-    #     print("Response:\n{}".format(response.json()))
-    # except Exception as e:
-    #     print("An error occured: ", e)
-
 def transcribe_audio(headers : dict, audio_url : str) -> Union[str, int]:
     """Submits transcription request and retrieves the trancript ID
 
@@ -54,7 +45,7 @@ def transcribe_audio(headers : dict, audio_url : str) -> Union[str, int]:
         response = requests.post(aai_config.TRANSCRIPT_URL, json={'audio_url': audio_url}, headers=headers)
         response.raise_for_status()
         return response.json()['id']
-    except HTTPError as e:
+    except requests.HTTPError as e:
         print("AssemblyAI responded with an error: {}".format(response.status_code))
     except KeyError as e:
         print("Unexpected response format from AssemblyAI (Key 'id' not found in JSON serialized form)\n{}".format(response.json()))
@@ -69,7 +60,7 @@ def check_transcription_status(headers : dict, transcript_id : Union[str, int], 
         response = requests.get(f'{aai_config.TRANSCRIPT_URL}/{transcript_id}', headers=headers)
         response.raise_for_status()
         return response.json()
-    except HTTPError as e:
+    except requests.HTTPError as e:
         print("AssemblyAI responded with an error: {}".format(response.status_code))
     except KeyError as e:
         print("Unexpected response format from AssemblyAI (Key 'status' not found in JSON serialized form)\n{}".format(response.json()))
@@ -97,7 +88,7 @@ def getAudioTranscription(filepath : str, api_key : str = aai_config.AAI_API_KEY
 
     audio_url = upload_audio(headers, filepath)
     if audio_url is None:
-        raise HTTPError("Max tries exceeded with AssemblyAI")
+        raise requests.HTTPError("Max tries exceeded with AssemblyAI")
     
     transcription_id = transcribe_audio(headers, audio_url)
 
