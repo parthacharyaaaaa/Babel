@@ -1,0 +1,18 @@
+{
+    "header" : {
+        "typ" : "str",
+        "alg" : "str"
+    },
+    "payload" : {
+        "sub" : "str",
+        "uid" : "int",
+
+        "exp" : "int",
+        "iat" : "int",
+        "nbf" : "int",
+
+        "iss":"str",
+        "jit" : "int",
+        "ipa": "str"
+    }
+}
