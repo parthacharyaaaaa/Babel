@@ -1,9 +1,8 @@
 from babel import db
-from flask_login import UserMixin
-from sqlalchemy import Constraint, Index, ForeignKey
+from sqlalchemy import Constraint
 from datetime import datetime
 
-class User(db.Model, UserMixin):
+class User(db.Model):
     __tablename__ = "users"
 
     #Credentials Metadata
