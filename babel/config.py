@@ -1,21 +1,22 @@
 from datetime import timedelta
 import os
 import json
-
 from dotenv import load_dotenv
-load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 from babel.errors import Missing_Configuration_Error
+
+CWD = os.path.dirname(__file__)
+load_dotenv()
 
 class Flask_Config:
     """Flask app configuration."""
     try:
         SECRET_KEY = os.environ["SECRET_KEY"]
-        SQLALCHEMY_DATABASE_URI = os.environ["DATABASE_URI"]
+        SQLALCHEMY_DATABASE_URI = "sqlite:///" + os.path.join(CWD, os.environ["RS_DATABASE_URI"])
         TRACK_MODIFICATIONS = os.environ.get("TRACK_MODIFICATIONS", False)
         PORT = os.environ["PORT"]
         HOST = os.environ["HOST"]
         SESSION_LIFETIME = timedelta(days=int(os.environ["SESSION_LIFETIME"]))
-        UPLOAD_FOLDER = os.environ["UPLOAD_FOLDER"]
+        UPLOAD_FOLDER = os.path.join(CWD, os.environ["UPLOAD_FOLDER"])
         MAX_CONTENT_LENGTH = int(os.environ["MAX_CONTENT_LENGTH"])
     except KeyError as e:
         raise Missing_Configuration_Error(f"FAILED TO SETUP CONFIGURATIONS FOR FLASK APPLICATION AS ENVIRONMENT VARIABLES WERE NOT FOUND (SEE: class Flask_Config at '{__file__}')")
@@ -35,8 +36,9 @@ class AssemblyAI_Config:
         raise ValueError(f"ASSEMBLY-AI API KEY IS INVALID. MUST BE STRINCTLY ALPHA-NUMERIC, NOT {AAI_API_KEY}")
 
 #Translation
+print(os.path.join(CWD, os.environ["AVAILABLE_LANGUAGES"]))
 try:
-    with open(os.environ["AVAILABLE_LANGUAGES"], "r") as languages_filepath:
+    with open(os.path.join(CWD, os.environ["AVAILABLE_LANGUAGES"]), "r") as languages_filepath:
         AVAILABLE_LANGUAGES = json.load(languages_filepath)
         if not isinstance(AVAILABLE_LANGUAGES, dict):
             raise ValueError("INVALID FORMAT DETECTED IN file: lang.json (NOT KEY-VALUE PAIRS)")
