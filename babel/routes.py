@@ -1,17 +1,11 @@
 from flask import url_for, redirect, render_template, jsonify, request
 import time
-from babel import app, db, bcrypt, login_manager
+from babel import app, db, bcrypt
 from babel.models import *
 from babel.config import *
 from babel.errors import *
 from babel.transciber import getAudioTranscription
 from googletrans import Translator
-
-#Login Configurations
-@login_manager.user_loader
-def load_user(user_id : int):
-    return User.query.filter_by(id = user_id).first()
-login_manager.login_view = "login"
 
 #View Functions
 
