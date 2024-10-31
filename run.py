@@ -1,5 +1,6 @@
 from babel import app, db
 from babel.config import flask_config
+from babel.models import *
 
 HOST = flask_config.HOST
 PORT = flask_config.PORT
