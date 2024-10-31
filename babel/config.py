@@ -12,7 +12,7 @@ class Flask_Config:
     try:
         SECRET_KEY = os.environ["SECRET_KEY"]
         SQLALCHEMY_DATABASE_URI = "sqlite:///" + os.path.join(CWD, os.environ["RS_DATABASE_URI"])
-        TRACK_MODIFICATIONS = os.environ.get("TRACK_MODIFICATIONS", False)
+        TRACK_MODIFICATIONS = bool(os.environ.get("TRACK_MODIFICATIONS", False))
         PORT = os.environ["PORT"]
         HOST = os.environ["HOST"]
         SESSION_LIFETIME = timedelta(days=int(os.environ["SESSION_LIFETIME"]))
