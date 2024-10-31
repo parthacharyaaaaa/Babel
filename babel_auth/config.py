@@ -26,3 +26,5 @@ class FlaskConfig:
         raise Missing_Configuration_Error(f"FAILED TO SETUP CONFIGURATIONS FOR FLASK AUTH APPLICATION AS ENVIRONMENT VARIABLES WERE NOT FOUND (SEE: class Flask_Config at '{__file__}')")
     except TypeError as e:
         raise TypeError(f"FAILURE IN CONFIGURING ENVIRONMENT VARIABLE(S) OF TYPE: INT (SEE: class Flask_Config at '{__file__}')")
+    
+flaskconfig = FlaskConfig()
