@@ -15,7 +15,7 @@ class Flask_Config:
         TRACK_MODIFICATIONS = bool(os.environ.get("TRACK_MODIFICATIONS", False))
         PORT = os.environ["PORT"]
         HOST = os.environ["HOST"]
-        SESSION_LIFETIME = timedelta(days=int(os.environ["SESSION_LIFETIME"]))
+        PERMANENT_SESSION_LIFETIME = timedelta(days=int(os.environ["SESSION_LIFETIME"]))
         UPLOAD_FOLDER = os.path.join(CWD, os.environ["UPLOAD_FOLDER"])
         MAX_CONTENT_LENGTH = int(os.environ["MAX_CONTENT_LENGTH"])
     except KeyError as e:
