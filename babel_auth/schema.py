@@ -86,12 +86,12 @@ class TokenManager:
             raise PermissionError("Invalid token") # Will replace permission error with a custom token error later
         
         # issue tokens here
-        refreshToken = self.issueRefreshToken()
+        refreshToken = self.issueRefreshToken(familyID=decodedRefreshToken["fid"])
         accessToken = self.issueAccessToken()
         
         return refreshToken, accessToken
 
-    def issueRefreshToken(self, additionalClaims : dict, authentication : bool = False, familyID : Optional[str] = None) -> str:
+    def issueRefreshToken(self, additionalClaims : Optional[dict] = None, authentication : bool = False, familyID : Optional[str] = None) -> str:
         payload : dict = {"iat" : time.mktime(datetime.now().timetuple()),
                           "exp" : time.mktime((datetime.now() + self.refreshLifetime).timetuple()),
                           "nbf" : time.mktime((datetime.now() + self.refreshLifetime - self.leeway).timetuple()),
