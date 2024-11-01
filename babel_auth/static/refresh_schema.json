@@ -5,14 +5,14 @@
     },
     "payload" : {
         "sub" : "str",
-        "uid" : "int",
 
         "exp" : "int",
         "iat" : "int",
         "nbf" : "int",
 
-        "iss":"str",
-        "jit" : "int",
-        "ipa": "str"
+        "jit" : "str"
+    },
+    "metadata" : {
+        "lifetime" : 120
     }
 }
