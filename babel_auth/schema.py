@@ -110,11 +110,10 @@ class TokenManager:
         self.conn.commit()
         return jwt.encode(payload=payload,
                           key=self.secretKey,
-                          algorithm=[self.refreshHeaders["alg"]],
+                          algorithm=self.refreshHeaders["alg"],
                           headers=self.refreshHeaders)
 
     def issueAccessToken(self, additionalClaims : dict) -> str:
-        # Handling registered claim names:
         payload : dict = {"iat" : time.mktime(datetime.now().timetuple()),
                           "exp" : time.mktime((datetime.now() + self.accessLifetime).timetuple()),
                           "nbf" : time.mktime((datetime.now() + self.accessLifetime - self.leeway).timetuple()),
@@ -124,7 +123,7 @@ class TokenManager:
         payload.update(additionalClaims)
         return jwt.encode(payload=payload,
                           key=self.secretKey,
-                          algorithm=[self.accessHeaders["alg"]],
+                          algorithm=self.accessHeaders["alg"],
                           headers=self.accessHeaders)
 
     def revokeToken(self, rToken : str) -> None:
