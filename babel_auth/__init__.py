@@ -9,4 +9,4 @@ db = SQLAlchemy(auth)
 migrate = Migrate(auth, db)
 
 from babel_auth import routes
-from babel_auth.schema import *
+from babel_auth import models
