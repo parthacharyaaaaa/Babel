@@ -1,15 +1,16 @@
 {
     "header" : {
-        "typ" : "str",
-        "alg" : "str"
+        "typ" : "JWT",
+        "alg" : "HS256"
     },
     "payload" : {
-        "sub" : "str",
+        "sub" : "",
+        "iss" : "babel-auth-service",
 
-        "exp" : "int",
-        "iat" : "int",
+        "exp" : "",
+        "iat" : "",
 
-        "jit" : "str"
+        "jit" : ""
     },
     "metadata" : {
         "lifetime" : 15
