@@ -67,14 +67,10 @@ class TokenManager:
 
     def decodeToken(self, token : str, checkAdditionals : bool = True, tType : str = "access") -> str:
         '''Decodes an access token, raises error in case of failure'''
-        decoded = jwt.decode(jwt = token,
+        return jwt.decode(jwt = token,
                             key = self.secretKey,
-                            algorithms = [self.accessHeaders["alg"]],
+                            algorithms = [self.accessHeaders["alg"] if tType == "access" else self.refreshHeaders["alg"]],
                             leeway = self.leeway)
-
-        # if (checkAdditionals and not self.additionalChecks(decoded)):
-        #     raise PermissionError("Invalid access token")
-        return decoded
 
     def reissueTokenPair(self, rToken : str) -> str:
         '''Issue a new token pair from a given refresh token
