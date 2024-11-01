@@ -1,9 +1,12 @@
-from babel_auth import db
 import json
 import jwt
 from datetime import timedelta
 from typing import Iterable, Optional
 import sqlite3
+import os
+import base64
+import time
+from datetime import datetime, timedelta
 
 # Refresh Token
 with open("static/refresh_schema.json", "r") as refreshSchema:
@@ -21,7 +24,7 @@ class TokenManager:
     activeRefreshTokens : int = 0 # List of non-revoked refresh tokens
     revocationList : list = []
 
-    def __init__(self, secretKey : str, connString : str, refreshSchema : dict, accessSchema : dict, additionalChecks : dict, alg : str = "HS256", typ : str = "JWT", uClaims : Iterable = ["exp", "iat"], additioanlHeaders : dict | None = None, leeway : timedelta = timedelta(minutes=3)):
+    def __init__(self, secretKey : str, connString : str, refreshSchema : dict, accessSchema : dict, additionalChecks : dict, alg : str = "HS256", typ : str = "JWT", uClaims : Iterable = ["exp", "iat", "jit"], additioanlHeaders : dict | None = None, leeway : timedelta = timedelta(minutes=3)):
         '''Initialize the token manager and set universal headers and claims, common to both access and refresh tokens
         
         params:
@@ -40,7 +43,7 @@ class TokenManager:
 
         self.uHeader = {"typ" : typ, "alg" : alg}
         if additioanlHeaders:
-            self.uHeader = additioanlHeaders.update(additioanlHeaders)
+            self.uHeader.update(additioanlHeaders)
 
         self.uClaims = uClaims
         self.secretKey = secretKey
@@ -48,7 +51,18 @@ class TokenManager:
         self.leeway = leeway
 
         self.refreshHeaders, self.refreshClaims = self.processTokenSchema(self.uHeader, self.uClaims, refreshSchema)
-        self.accessHeaders, self.accessClaims = self.processTokenSchema(self.uHeader, self.uClaims, accessSchema)
+        self.accessHeaders, self.accessClaims = self.processTokenSchema(self.uHeader, self.uClaims, accessSchema)   
+
+    def decodeAccessToken(self, aToken : str, checkAdditionals : bool = True) -> str:
+        '''Decodes an access token, raises error in case of failure'''
+        decoded = jwt.decode(jwt = aToken,
+                            key = self.secretKey,
+                            algorithms = [self.uHeader["alg"]],
+                            leeway = self.leeway)
+
+        if (checkAdditionals and not self.additionalChecks(decoded)):
+            raise PermissionError("Invalid access token")
+        return decoded
 
     def reissueTokenPair(self, aToken : str, rToken : str) -> str:
         '''Issue a new token pair from a given refresh token
@@ -65,19 +79,26 @@ class TokenManager:
         if not self.additionalChecks(rDecoded):
             raise PermissionError("Invalid refresh token, revoking token family")
         
-    
-    def issueRefreshToken(self) -> str:
-        TokenManager.activeRefreshTokens += 1
+        accessPayload : dict = self.accessClaims
+        accessPayload.update({"jit" : self.generate_unique_jit()})
+        accessToken = jwt.encode(payload = self.accessClaims,
+                   key = self.secretKey,
+                   algorithm = self.uHeader["alg"],
+                   headers = self.uHeader)
+
+    def issueRefreshToken(self, authentication : bool = False) -> str:
+        if authentication:
+            TokenManager.activeRefreshTokens += 1
         pass
 
-    def verifyAccessToken(self, aToken : str, checkAdditionals : bool = True) -> bool:
-        try:
-            decoded = jwt.decode(jwt = aToken, key = self.secretKey, algorithms = [self.uHeader["alg"]], leeway = self.leeway)
-            if (checkAdditionals and not self.additionalChecks(decoded)):
-                raise PermissionError("Invalid access token")
-            return True
-        except:
-            return False
+    def issueAccessToken(self, additionalClaims : dict) -> str:
+        # Handling registered claim names:
+        payload : dict = {"iat" : time.mktime(datetime.now().timetuple()),
+                          "exp" : time.mktime((datetime.now() + timedelta(minutes=15)).timetuple()),
+                          "nbf" : time.mktime((datetime.now() - timedelta(minutes=13)).timetuple()),
+                          
+                          "jit" : self.generate_unique_jit()}
+        payload.update(additionalClaims)
 
     def revokeToken(self, rToken : str, jit : Optional[str]) -> None:
         '''Revokes a refresh token, without invalidating the family'''
@@ -102,6 +123,7 @@ class TokenManager:
         pass
 
     def additionalChecks(self) -> bool: ... # Will dynamically overwrite this in __init__, hence the "..."
+    
     @staticmethod
     def decrementActiveTokens():
         if TokenManager.activeRefreshTokens == 0:
@@ -110,6 +132,7 @@ class TokenManager:
 
     @staticmethod
     def processTokenSchema(uHeaders, uClaims, Schema : dict) -> None:
+        '''Dynamically generate token claims and headers'''
         headers : dict = Schema["header"]
         for header in uHeaders:
             headers.pop(header, None)
@@ -119,3 +142,7 @@ class TokenManager:
             claims.pop(claim, None)
         
         return headers, claims
+    
+    @staticmethod
+    def generate_unique_jit():
+        return base64.urlsafe_b64encode(os.urandom(16)).decode('utf-8')
