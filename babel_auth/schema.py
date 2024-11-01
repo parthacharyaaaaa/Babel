@@ -38,7 +38,7 @@ class TokenManager:
         accessSchema (dict-like): Schema of the access token\n
         alg (str): Algorithm to use for signing, universal to all tokens\n
         typ (str): Type of token being issued, universal to all tokens\n
-        uClaims (Iterable): Universal claims to include for both access and refresh tokens\n
+        uClaims (dict-like): Universal claims to include for both access and refresh tokens\n
         additonalHeaders (dict-like): Additional header information, universal to all tokens'''
 
         self.conn = sqlite3.connect(connString, uri=True)
@@ -53,8 +53,8 @@ class TokenManager:
             uHeader.update(uHeaders)
 
         # Initialize specific headers, if any, for refresh and access tokens respectively
-        self.refreshHeaders = uHeader.update(refreshSchema["header"]) or {}
-        self.accessHeaders = uHeader.update(accessSchema["header"])  or {}
+        self.refreshHeaders = dict(uHeader, **refreshSchema["header"])
+        self.accessHeaders = dict(uHeader, **accessSchema["header"])
 
         # Initialize universal claims, common to all tokens issued in any context. 
         # These should at the very least contain registered claims like "exp"
