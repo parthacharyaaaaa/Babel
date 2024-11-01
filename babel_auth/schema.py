@@ -19,7 +19,15 @@ class TokenManager:
     activeRefreshTokens : int = 0 # List of non-revoked refresh tokens
     revocationList : list = []
 
-    def __init__(self, secretKey : str, connString : str, refreshSchema : dict, accessSchema : dict, additionalChecks : dict, alg : str = "HS256", typ : str = "JWT", uClaims : Iterable = ["exp", "iat", "jit"], additioanlHeaders : dict | None = None, leeway : timedelta = timedelta(minutes=3)):
+    def __init__(self, secretKey : str,
+                 connString : str,
+                 refreshSchema : dict,
+                 accessSchema : dict, 
+                 alg : str = "HS256",
+                 typ : str = "JWT",
+                 uClaims : dict = {"iss" : "babel-auth-service"},
+                 additioanlHeaders : dict | None = None,
+                 leeway : timedelta = timedelta(minutes=3)):
         '''Initialize the token manager and set universal headers and claims, common to both access and refresh tokens
         
         params:
@@ -52,10 +60,6 @@ class TokenManager:
         # These should at the very least contain registered claims like "exp"
         self.uClaims = uClaims
 
-        # Initialize specific claims, if any, for refresh and access tokens respectively
-        self.refreshClaims : list = self.generateAdditionalClaims(refreshSchema["payload"].keys())
-        self.accessClaims : list = accessSchema["payload"].keys()
-
         # Set leeway for time-related claims
         self.leeway = leeway
 
@@ -66,8 +70,8 @@ class TokenManager:
                             algorithms = [self.accessHeaders["alg"]],
                             leeway = self.leeway)
 
-        if (checkAdditionals and not self.additionalChecks(decoded)):
-            raise PermissionError("Invalid access token")
+        # if (checkAdditionals and not self.additionalChecks(decoded)):
+        #     raise PermissionError("Invalid access token")
         return decoded
 
     def reissueTokenPair(self, rToken : str) -> str:
@@ -101,7 +105,7 @@ class TokenManager:
                           "nbf" : time.mktime((datetime.now() - timedelta(minutes=13)).timetuple()),
                           
                           "jit" : self.generate_unique_jit()}
-        payload.update(additionalClaims)
+        payload.update(self.uClaims)
 
     def revokeToken(self, rToken : str) -> None:
         '''Revokes a refresh token, without invalidating the family'''
