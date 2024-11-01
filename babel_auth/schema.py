@@ -1,10 +1,9 @@
 from babel_auth import db
-from sqlalchemy import Constraint
 import json
 import jwt
 from datetime import timedelta
 from typing import Iterable
-
+import sqlite3
 
 # Refresh Token
 with open("static/refresh_schema.json", "r") as refreshSchema:
@@ -22,18 +21,22 @@ class TokenManager:
     activeRefreshTokens : int = 0 # List of non-revoked refresh tokens
     revocationList : list = []
 
-    def __init__(self, secretKey : str, refreshSchema : dict, accessSchema : dict, additionalChecks : dict, alg : str = "HS256", typ : str = "JWT", uClaims : Iterable = ["exp", "iat"], additioanlHeaders : dict | None = None, leeway : timedelta = timedelta(minutes=3)):
+    def __init__(self, secretKey : str, connString : str, refreshSchema : dict, accessSchema : dict, additionalChecks : dict, alg : str = "HS256", typ : str = "JWT", uClaims : Iterable = ["exp", "iat"], additioanlHeaders : dict | None = None, leeway : timedelta = timedelta(minutes=3)):
         '''Initialize the token manager and set universal headers and claims, common to both access and refresh tokens
         
         params:
         
         secretKey (str): secret credential for HMAC/RSA or any other encryption algorithm in place\n
+        connString (str): Database URI string for establishing connection to db
         refreshSchema (dict-like): Schema of the refresh token\n
         accessSchema (dict-like): Schema of the access token\n
         alg (str): Algorithm to use for signing, universal to all tokens\n
         typ (str): Type of token being issued, universal to all tokens\n
         uClaims (Iterable): Universal claims to include for both access and refresh tokens\n
         additonalHeaders (dict-like): Additional header information, universal to all tokens'''
+
+        self.conn = sqlite3.connect(connString, uri=True)
+        self.cursor = sqlite3.Cursor(self.conn)
 
         self.uHeader = {"typ" : typ, "alg" : alg}
         if additioanlHeaders:
