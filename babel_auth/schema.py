@@ -26,7 +26,7 @@ class TokenManager:
                  alg : str = "HS256",
                  typ : str = "JWT",
                  uClaims : dict = {"iss" : "babel-auth-service"},
-                 additioanlHeaders : dict | None = None,
+                 uHeaders : dict | None = None,
                  leeway : timedelta = timedelta(minutes=3)):
         '''Initialize the token manager and set universal headers and claims, common to both access and refresh tokens
         
@@ -44,13 +44,13 @@ class TokenManager:
         self.conn = sqlite3.connect(connString, uri=True)
         self.cursor = sqlite3.Cursor(self.conn)
 
-        # Initialize signing key (HMAC SHA 256)
+        # Initialize signing key (HMACSHA256)
         self.secretKey = secretKey
 
         # Initialize universal headers, common to all tokens issued in any context
         uHeader = {"typ" : typ, "alg" : alg}
-        if additioanlHeaders:
-            uHeader.update(additioanlHeaders)
+        if uHeaders:
+            uHeader.update(uHeaders)
 
         # Initialize specific headers, if any, for refresh and access tokens respectively
         self.refreshHeaders = uHeader.update(refreshSchema["header"]) or {}
@@ -59,6 +59,9 @@ class TokenManager:
         # Initialize universal claims, common to all tokens issued in any context. 
         # These should at the very least contain registered claims like "exp"
         self.uClaims = uClaims
+
+        self.refreshLifetime = timedelta(minutes=refreshSchema["metadata"]["lifetime"])
+        self.accessLifetime = timedelta(minutes=accessSchema["metadata"]["lifetime"])
 
         # Set leeway for time-related claims
         self.leeway = leeway
@@ -93,19 +96,41 @@ class TokenManager:
         
         return refreshToken, accessToken
 
-    def issueRefreshToken(self, authentication : bool = False) -> str:
+    def issueRefreshToken(self, additionalClaims : dict, authentication : bool = False, familyID : Optional[str] = None) -> str:
+        payload : dict = {"iat" : time.mktime(datetime.now().timetuple()),
+                          "exp" : time.mktime((datetime.now() + self.refreshLifetime).timetuple()),
+                          "nbf" : time.mktime((datetime.now() + self.refreshLifetime - self.leeway).timetuple()),
+                          
+                          "jit" : self.generate_unique_identifier()}
+        payload.update(self.uClaims)
+        payload.update(additionalClaims)
+
         if authentication:
             TokenManager.activeRefreshTokens += 1
-        pass
+            payload.update({"fid" : self.generate_unique_identifier()})
+        else:
+            payload.update({"fid" : familyID})
+        
+        self.cursor.execute("INSERT INTO tokens (jit, sub, iat, exp, ipa, revoked, family_id) VALUES (?,?,?,?,?,?,?)", (payload["jit"], None, payload["iat"], payload["exp"], payload.get("ipa"), False, payload["fid"] if authentication else familyID))
+
+        return jwt.encode(payload=payload,
+                          key=self.secretKey,
+                          algorithm=[self.refreshHeaders["alg"]],
+                          headers=self.refreshHeaders)
 
     def issueAccessToken(self, additionalClaims : dict) -> str:
         # Handling registered claim names:
         payload : dict = {"iat" : time.mktime(datetime.now().timetuple()),
-                          "exp" : time.mktime((datetime.now() + timedelta(minutes=15)).timetuple()),
-                          "nbf" : time.mktime((datetime.now() - timedelta(minutes=13)).timetuple()),
+                          "exp" : time.mktime((datetime.now() + self.accessLifetime).timetuple()),
+                          "nbf" : time.mktime((datetime.now() + self.accessLifetime - self.leeway).timetuple()),
                           
-                          "jit" : self.generate_unique_jit()}
+                          "jit" : self.generate_unique_identifier()}
         payload.update(self.uClaims)
+        payload.update(additionalClaims)
+        return jwt.encode(payload=payload,
+                          key=self.secretKey,
+                          algorithm=[self.accessHeaders["alg"]],
+                          headers=self.accessHeaders)
 
     def revokeToken(self, rToken : str) -> None:
         '''Revokes a refresh token, without invalidating the family'''
@@ -120,9 +145,9 @@ class TokenManager:
         except Exception as e:
             print("Error in revocation")
 
-    def invalidateFamily(self, fID : int) -> None:
+    def invalidateFamily(self, fID : str) -> None:
         '''Remove entire token family from revocation list and token store'''
-        ...
+        self.cursor.execute("DELETE FROM tokens WHERE family_id = ?", (fID,))
 
     @staticmethod
     def decrementActiveTokens():
@@ -131,5 +156,5 @@ class TokenManager:
         TokenManager.activeRefreshTokens -= 1
     
     @staticmethod
-    def generate_unique_jit():
+    def generate_unique_identifier():
         return base64.urlsafe_b64encode(os.urandom(16)).decode('utf-8')
