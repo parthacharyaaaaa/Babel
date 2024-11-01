@@ -2,7 +2,7 @@ from babel_auth import db
 import json
 import jwt
 from datetime import timedelta
-from typing import Iterable
+from typing import Iterable, Optional
 import sqlite3
 
 # Refresh Token
@@ -27,7 +27,7 @@ class TokenManager:
         params:
         
         secretKey (str): secret credential for HMAC/RSA or any other encryption algorithm in place\n
-        connString (str): Database URI string for establishing connection to db
+        connString (str): Database URI string for establishing connection to db\n
         refreshSchema (dict-like): Schema of the refresh token\n
         accessSchema (dict-like): Schema of the access token\n
         alg (str): Algorithm to use for signing, universal to all tokens\n
@@ -79,16 +79,24 @@ class TokenManager:
         except:
             return False
 
-    def revokeToken(self, rToken : str) -> None:
+    def revokeToken(self, rToken : str, jit : Optional[str]) -> None:
         '''Revokes a refresh token, without invalidating the family'''
         try:
-            self.decrementActiveTokens()
-        except ValueError:
-            print("Error in revokation")
-        
-        TokenManager.revocationList.append(rToken) # Dict for now, will replace with Redis store later
+            if jit:
+                self.cursor.execute("UPDATE tokens SET revoked = True WHERE jit = ?", (jit,))
+            else:
+                decodedJIT = jwt.decode(rToken, options={"verify_signature":False})["payload"]["jit"] # No need to perform computationally-intensive verification since this method is called internally by TokenManager itself after verification has been done already.
+                self.cursor.execute("UPDATE tokens SET revoked = True WHERE jit = ?", (decodedJIT,))
 
-    def invalidateFamily(self) -> None: ...
+            self.decrementActiveTokens()
+            TokenManager.revocationList.append(rToken) # Dict for now, will replace with Redis store later
+        except ValueError:
+            print("Number of active tokens must be non-negative integer")
+        except Exception as e:
+            print("Error in revocation")
+
+    def invalidateFamily(self, fID : int) -> None:
+        '''Remove entire token family from revocation list and token store'''
 
     def verifyRefreshToken(self) -> bool:
         pass
