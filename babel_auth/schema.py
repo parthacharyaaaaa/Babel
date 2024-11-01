@@ -8,11 +8,6 @@ import base64
 import time
 from datetime import datetime, timedelta
 
-# Refresh Token
-with open("static/refresh_schema.json", "r") as refreshSchema:
-    REFRESH_SCHEMA : dict = json.load(refreshSchema)
-    print(REFRESH_SCHEMA)  
-
 class TokenManager:
     '''### Class for issuing and verifying access and refresh tokens assosciated with authentication and authorization
     
@@ -58,11 +53,11 @@ class TokenManager:
         self.uClaims = uClaims
 
         # Initialize specific claims, if any, for refresh and access tokens respectively
-        self.refreshClaims : list = refreshSchema["payload"].keys()
+        self.refreshClaims : list = self.generateAdditionalClaims(refreshSchema["payload"].keys())
         self.accessClaims : list = accessSchema["payload"].keys()
 
         # Set leeway for time-related claims
-        self.leeway = leeway  
+        self.leeway = leeway
 
     def decodeToken(self, token : str, checkAdditionals : bool = True, tType : str = "access") -> str:
         '''Decodes an access token, raises error in case of failure'''
@@ -94,7 +89,6 @@ class TokenManager:
         
         return refreshToken, accessToken
 
-
     def issueRefreshToken(self, authentication : bool = False) -> str:
         if authentication:
             TokenManager.activeRefreshTokens += 1
@@ -109,17 +103,14 @@ class TokenManager:
                           "jit" : self.generate_unique_jit()}
         payload.update(additionalClaims)
 
-    def revokeToken(self, rToken : str, jit : Optional[str]) -> None:
+    def revokeToken(self, rToken : str) -> None:
         '''Revokes a refresh token, without invalidating the family'''
         try:
-            if jit:
-                self.cursor.execute("UPDATE tokens SET revoked = True WHERE jit = ?", (jit,))
-            else:
-                decodedJIT = jwt.decode(rToken, options={"verify_signature":False})["payload"]["jit"] # No need to perform computationally-intensive verification since this method is called internally by TokenManager itself after verification has been done already.
-                self.cursor.execute("UPDATE tokens SET revoked = True WHERE jit = ?", (decodedJIT,))
+            decodedJIT = jwt.decode(rToken, options={"verify_signature":False})["payload"]["jit"] # No need to perform computationally-intensive verification since this method is called internally by TokenManager itself after verification has been done already.
+            self.cursor.execute("UPDATE tokens SET revoked = True WHERE jit = ?", (decodedJIT,))
 
+            TokenManager.revocationList.append({"jit" : decodedJIT["jit"], "fid" : decodedJIT["fid"]}) # Dict for now, will replace with Redis store later
             self.decrementActiveTokens()
-            TokenManager.revocationList.append(rToken) # Dict for now, will replace with Redis store later
         except ValueError:
             print("Number of active tokens must be non-negative integer")
         except Exception as e:
@@ -127,11 +118,7 @@ class TokenManager:
 
     def invalidateFamily(self, fID : int) -> None:
         '''Remove entire token family from revocation list and token store'''
-
-    def verifyRefreshToken(self) -> bool:
-        pass
-
-    def additionalChecks(self) -> bool: ... # Will dynamically overwrite this in __init__, hence the "..."
+        ...
 
     @staticmethod
     def decrementActiveTokens():
