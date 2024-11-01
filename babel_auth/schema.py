@@ -1,7 +1,6 @@
-import json
 import jwt
 from datetime import timedelta
-from typing import Iterable, Optional
+from typing import Optional
 import sqlite3
 import os
 import base64
