@@ -41,17 +41,28 @@ class TokenManager:
         self.conn = sqlite3.connect(connString, uri=True)
         self.cursor = sqlite3.Cursor(self.conn)
 
+        # Initialize signing key (HMAC SHA 256)
+        self.secretKey = secretKey
+
+        # Initialize universal headers, common to all tokens issued in any context
         self.uHeader = {"typ" : typ, "alg" : alg}
         if additioanlHeaders:
             self.uHeader.update(additioanlHeaders)
 
+        # Initialize specific headers, if any, for refresh and access tokens respectively
+        self.refreshHeaders = refreshSchema["header"]
+        self.accessHeaders = accessSchema["header"]
+
+        # Initialize universal claims, common to all tokens issued in any context. 
+        # These should at the very least contain registered claims like "exp"
         self.uClaims = uClaims
-        self.secretKey = secretKey
 
-        self.leeway = leeway
+        # Initialize specific claims, if any, for refresh and access tokens respectively
+        refreshClaims : list = refreshSchema["payload"].keys()
+        accessClaims : list = accessSchema["payload"].keys()
 
-        self.refreshHeaders, self.refreshClaims = self.processTokenSchema(self.uHeader, self.uClaims, refreshSchema)
-        self.accessHeaders, self.accessClaims = self.processTokenSchema(self.uHeader, self.uClaims, accessSchema)   
+        # Set leeway for time-related claims
+        self.leeway = leeway  
 
     def decodeAccessToken(self, aToken : str, checkAdditionals : bool = True) -> str:
         '''Decodes an access token, raises error in case of failure'''
@@ -123,25 +134,12 @@ class TokenManager:
         pass
 
     def additionalChecks(self) -> bool: ... # Will dynamically overwrite this in __init__, hence the "..."
-    
+
     @staticmethod
     def decrementActiveTokens():
         if TokenManager.activeRefreshTokens == 0:
             raise ValueError("Active refresh tokens cannot be a negative number")
         TokenManager.activeRefreshTokens -= 1
-
-    @staticmethod
-    def processTokenSchema(uHeaders, uClaims, Schema : dict) -> None:
-        '''Dynamically generate token claims and headers'''
-        headers : dict = Schema["header"]
-        for header in uHeaders:
-            headers.pop(header, None)
-
-        claims : dict = Schema["payload"]
-        for claim in uClaims:
-            claims.pop(claim, None)
-        
-        return headers, claims
     
     @staticmethod
     def generate_unique_jit():
