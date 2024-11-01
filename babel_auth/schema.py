@@ -45,13 +45,13 @@ class TokenManager:
         self.secretKey = secretKey
 
         # Initialize universal headers, common to all tokens issued in any context
-        self.uHeader = {"typ" : typ, "alg" : alg}
+        uHeader = {"typ" : typ, "alg" : alg}
         if additioanlHeaders:
-            self.uHeader.update(additioanlHeaders)
+            uHeader.update(additioanlHeaders)
 
         # Initialize specific headers, if any, for refresh and access tokens respectively
-        self.refreshHeaders = refreshSchema["header"]
-        self.accessHeaders = accessSchema["header"]
+        self.refreshHeaders = uHeader.update(refreshSchema["header"]) or {}
+        self.accessHeaders = uHeader.update(accessSchema["header"])  or {}
 
         # Initialize universal claims, common to all tokens issued in any context. 
         # These should at the very least contain registered claims like "exp"
@@ -64,38 +64,36 @@ class TokenManager:
         # Set leeway for time-related claims
         self.leeway = leeway  
 
-    def decodeAccessToken(self, aToken : str, checkAdditionals : bool = True) -> str:
+    def decodeToken(self, token : str, checkAdditionals : bool = True, tType : str = "access") -> str:
         '''Decodes an access token, raises error in case of failure'''
-        decoded = jwt.decode(jwt = aToken,
+        decoded = jwt.decode(jwt = token,
                             key = self.secretKey,
-                            algorithms = [self.uHeader["alg"]],
+                            algorithms = [self.accessHeaders["alg"]],
                             leeway = self.leeway)
 
         if (checkAdditionals and not self.additionalChecks(decoded)):
             raise PermissionError("Invalid access token")
         return decoded
 
-    def reissueTokenPair(self, aToken : str, rToken : str) -> str:
+    def reissueTokenPair(self, rToken : str) -> str:
         '''Issue a new token pair from a given refresh token
         
         params:
         
         aToken: JWT encoded access token\n
         rToken: JWT encoded refresh token'''
+        try:
+            decodedRefreshToken = self.decodeToken(rToken, tType = "refresh")
+            self.revokeToken(decodedRefreshToken["jit"])
+        except:
+            raise PermissionError("Invalid token") # Will replace permission error with a custom token error later
+        
+        # issue tokens here
+        refreshToken = self.issueRefreshToken()
+        accessToken = self.issueAccessToken()
+        
+        return refreshToken, accessToken
 
-        if not self.verifyAccessToken(aToken): 
-            raise PermissionError("Invalid access token") # Will replace permission error with a custom token error later
-        
-        rDecoded = jwt.decode(jwt=rToken, key=self.secretKey, algorithms=[self.uHeader["alg"]], leeway=self.leeway)
-        if not self.additionalChecks(rDecoded):
-            raise PermissionError("Invalid refresh token, revoking token family")
-        
-        accessPayload : dict = self.accessClaims
-        accessPayload.update({"jit" : self.generate_unique_jit()})
-        accessToken = jwt.encode(payload = self.accessClaims,
-                   key = self.secretKey,
-                   algorithm = self.uHeader["alg"],
-                   headers = self.uHeader)
 
     def issueRefreshToken(self, authentication : bool = False) -> str:
         if authentication:
