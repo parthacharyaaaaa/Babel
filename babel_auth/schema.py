@@ -58,8 +58,8 @@ class TokenManager:
         self.uClaims = uClaims
 
         # Initialize specific claims, if any, for refresh and access tokens respectively
-        refreshClaims : list = refreshSchema["payload"].keys()
-        accessClaims : list = accessSchema["payload"].keys()
+        self.refreshClaims : list = refreshSchema["payload"].keys()
+        self.accessClaims : list = accessSchema["payload"].keys()
 
         # Set leeway for time-related claims
         self.leeway = leeway  
