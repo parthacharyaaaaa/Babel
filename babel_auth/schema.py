@@ -112,7 +112,7 @@ class TokenManager:
             payload.update({"fid" : familyID})
         
         self.cursor.execute("INSERT INTO tokens (jit, sub, iat, exp, ipa, revoked, family_id) VALUES (?,?,?,?,?,?,?)", (payload["jit"], None, payload["iat"], payload["exp"], payload.get("ipa"), False, payload["fid"] if authentication else familyID))
-
+        self.conn.commit()
         return jwt.encode(payload=payload,
                           key=self.secretKey,
                           algorithm=[self.refreshHeaders["alg"]],
@@ -137,6 +137,7 @@ class TokenManager:
         try:
             decodedJIT = jwt.decode(rToken, options={"verify_signature":False})["payload"]["jit"] # No need to perform computationally-intensive verification since this method is called internally by TokenManager itself after verification has been done already.
             self.cursor.execute("UPDATE tokens SET revoked = True WHERE jit = ?", (decodedJIT,))
+            self.conn.commit()
 
             TokenManager.revocationList.append({"jit" : decodedJIT["jit"], "fid" : decodedJIT["fid"]}) # Dict for now, will replace with Redis store later
             self.decrementActiveTokens()
@@ -148,6 +149,7 @@ class TokenManager:
     def invalidateFamily(self, fID : str) -> None:
         '''Remove entire token family from revocation list and token store'''
         self.cursor.execute("DELETE FROM tokens WHERE family_id = ?", (fID,))
+        self.conn.commit()
 
     @staticmethod
     def decrementActiveTokens():
