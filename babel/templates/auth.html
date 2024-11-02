@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% block title %} Babel | {{form_type}} {% endblock %}
+
+{% block depends %}
+{% endblock %}
+
+{% block content %}
+    <section class="wrapper" id="wrappper">
+        <form id="auth-form" class="auth-form">
+            <input type="text" class="text-input" id="email_id" placeholder="Enter email address" name="email_id">
+            <input type="password" name="password" class="text-input" id="password">
+            {% if form_type != "login" %}
+            <input type="password" name="cpassword" class="text-input" id="cpassword">
+            {% endif %}
+
+            <button class="btn" id="submission-btn">{{form_type}}</button>
+
+        </form>
+    </section>
+{% endblock %}
