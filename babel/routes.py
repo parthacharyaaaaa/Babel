@@ -15,19 +15,15 @@ def home():
     return render_template("home.html")
 
 #Account Management (Signup, Login, Logout, Deletion)
-@app.route("/signup", methods = ["GET", "POST"])
+@app.route("/signup", methods = ["GET"])
 def signup():
     if request.method == "GET":
         return render_template("signup.html")
 
-@app.route("/login", methods = ["POST", "GET"])
+@app.route("/login", methods = ["GET"])
 def login():
     if request.method == "POST":
         return render_template("login.html")
-
-@app.route("/logout", methods = ["POST"])
-def logout():
-    pass
 
 @app.route("/delete-account", methods = ["DELETE"])
 def delete_account():
