@@ -13,8 +13,10 @@
             <input type="password" name="cpassword" class="text-input" id="cpassword">
             {% endif %}
 
-            <button class="btn" id="submission-btn">{{form_type}}</button>
+            <button class="btn" id="submission-btn" type="button">{{form_type}}</button>
 
         </form>
     </section>
+
+    <script type="text/javascript" src="{{url_for('static', filename='scripts/auth.js')}}"></script>
 {% endblock %}
