@@ -1,4 +1,4 @@
-from flask import url_for, redirect, render_template, jsonify, request, abort
+from flask import url_for, redirect, render_template, jsonify, request, abort, g
 import time
 from babel import app, db, bcrypt
 from babel.models import *
@@ -6,11 +6,10 @@ from babel.config import *
 from babel.errors import *
 from babel.transciber import getAudioTranscription
 from googletrans import Translator
-from sqlalchemy import select, insert
+from sqlalchemy import select, insert, update
 from sqlalchemy.exc import IntegrityError, DataError, StatementError
 
 #View Functions
-
 #Homepage
 @app.route("/", methods = ["GET", "POST"])
 def home():
@@ -60,17 +59,31 @@ def register():
                                             time_deleted = None,
                                             transcriptions = 0,
                                             translations = 0))
+        db.session.commit()
     except (IntegrityError, DataError, StatementError) as e:
         db.session.rollback()
         abort(500)
     
-    db.session.commit()
     return jsonify({"message" : "Account Registered Successfully"}), 201
-    
 
 @app.route("/delete-account", methods = ["DELETE"])
 def delete_account():
-    pass
+    if not request.is_json:
+        raise Unexpected_Request_Format(f"POST /{request.path[1:]} Only accepts JSON requests")
+    
+    password : str = request.get_json(force=True)["password"]
+    if not password:
+        raise Unexpected_Request_Format(f"POST /{request.path[1:]} Password missing")
+    try:
+        db.session.execute(update(User)
+                           .where(User.email_id == g.decodedToken["sub"])
+                           .values(deleted = True, time_deleted = datetime.now()))
+        db.session.commit()
+    except (DataError, StatementError):
+        db.session.rollback()
+        abort(500)
+    # Logic for sending an API request to auth server to instantly delete all assosciated refresh tokens
+
 
 #History Management
 @app.route("/history", methods = ["GET"])
