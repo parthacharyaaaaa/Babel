@@ -1,4 +1,4 @@
-from flask import url_for, redirect, render_template, jsonify, request
+from flask import url_for, redirect, render_template, jsonify, request, abort
 import time
 from babel import app, db, bcrypt
 from babel.models import *
@@ -6,6 +6,8 @@ from babel.config import *
 from babel.errors import *
 from babel.transciber import getAudioTranscription
 from googletrans import Translator
+from sqlalchemy import select, insert
+from sqlalchemy.exc import IntegrityError, DataError, StatementError
 
 #View Functions
 
@@ -20,6 +22,51 @@ def home():
 def auth():
     return render_template("auth.html", form_type=request.path[1:])
 
+@app.route("/register", methods = ["POST"])
+def register():
+    if not request.is_json:
+        raise Unexpected_Request_Format(f"POST /{request.path[1:]} Only accepts JSON requests")
+    
+    registrationDetails = request.get_json(force=True)
+    try:
+        uname : str = registrationDetails["username"]
+        email : str = registrationDetails["email"]
+        password : str = registrationDetails["pass"]
+        cpassword : str = registrationDetails["cpass"]
+
+        if password != cpassword:
+            raise ValueError
+    except KeyError as k:
+        raise Unexpected_Request_Format(f"POST /{request.path[1:]} Mandatory field missing")
+    except ValueError as v:
+        raise Unexpected_Request_Format(f"POST /{request.path[1:]} Passwords do not match")
+
+    userExists = db.session.execute(select(User).where(User.username == uname)).first()
+    emailExists = db.session.execute(select(User).where(User.email_id == email)).first()
+
+    if emailExists:
+        return jsonify({"message" : "This email address is already registered, please log in or use a different email address"}), 409
+
+    if userExists:
+        return jsonify({"message" : "This username is already registered, please log in or use a different username"}), 409
+    
+    try:
+        db.session.execute(insert(User).values(username = uname,
+                                            password = bcrypt.generate_password_hash(password),
+                                            email_id = email,
+                                            time_created = datetime.now(),
+                                            last_login = datetime.now(),
+                                            deleted = False,
+                                            time_deleted = None,
+                                            transcriptions = 0,
+                                            translations = 0))
+    except (IntegrityError, DataError, StatementError) as e:
+        db.session.rollback()
+        abort(500)
+    
+    db.session.commit()
+    return jsonify({"message" : "Account Registered Successfully"}), 201
+    
 
 @app.route("/delete-account", methods = ["DELETE"])
 def delete_account():
