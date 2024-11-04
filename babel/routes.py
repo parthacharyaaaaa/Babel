@@ -6,7 +6,7 @@ from babel.config import *
 from babel.errors import *
 from babel.transciber import getAudioTranscription
 from googletrans import Translator
-from sqlalchemy import select, insert, update
+from sqlalchemy import select, insert, update, union_all, Result
 from sqlalchemy.exc import IntegrityError, DataError, StatementError
 
 #View Functions
@@ -84,15 +84,61 @@ def delete_account():
         abort(500)
     # Logic for sending an API request to auth server to instantly delete all assosciated refresh tokens
 
-
 #History Management
 @app.route("/history", methods = ["GET"])
 def history():
-    return render_template("history.html")
-
+   return render_template("history.html")
+    
 @app.route("/fetch-history", methods = ["GET"])
 def fetch_history():
-    pass
+    if not request.is_json:
+        raise Unexpected_Request_Format(f"POST /{request.path[1:]} Only accepts JSON requests")
+    
+    username : str = g.decodedToken.get("sub", None)
+
+    viewPreference : str = request.args.get("preference", "all")
+    try:
+        currentPage : int = int(request.args.get("page", 1))
+    except ValueError:
+        raise Unexpected_Request_Format(f"POST /{request.path[1:]} Requires an integer to indicate value result")
+    perPage : int = 10
+
+    transcriptionQuery = (select(Transcription_Request.id,
+                                Transcription_Request.time_requested.label("time_requested"),
+                                Transcription_Request.transcipted_text.label("content")
+                                ).where(Transcription_Request.requestor == username)
+                                .order_by(Transcription_Request.time_requested.desc())
+                                .limit(perPage)
+                                .offset((currentPage-1) * perPage))
+    
+    translationQuery = (select(Translation_Request.id,
+                              Translation_Request.time_requested.label("time_requested"),
+                              Translation_Request.language_from.label("src"),
+                              Translation_Request.language_to.label("dst"),
+                              ).where(Translation_Request.requested_by == username)
+                              .order_by(Translation_Request.time_requested.desc())
+                              .limit(perPage)
+                              .offset((currentPage-1) * perPage))
+    
+    combinedQuery = (transcriptionQuery.union_all(translationQuery)
+                    .order_by(db.desc("time_requested"))
+                    .limit(perPage)
+                    .offset((currentPage - 1) * perPage))
+    
+    try:
+        if viewPreference == "transcription":
+            qResult = db.session.execute(transcriptionQuery)
+        elif viewPreference == "translation":
+            qResult = db.session.execute(translationQuery)
+        else:
+            qResult = db.session.execute(combinedQuery)
+    except (IntegrityError, DataError):
+        abort(500) #NOTE: Add custom DB error wrapper for app.errorhandler()
+    
+    pyReadableResult : list = [row._asdict() for row in qResult]
+
+    return jsonify({"result" : pyReadableResult}), 200
+
 
 #Transcriptions and Translations
 @app.route("/transcript", methods = ["GET"])
@@ -119,7 +165,6 @@ def transcript_speech():
     print(filepath)
     result = getAudioTranscription(filepath)
     return jsonify({"text" : result["text"], "confidence" : result["confidence"], "time" : time.time() - starting_time}), 200
-
 
 @app.route("/translate-text", methods = ["POST"])
 def translate_text():
