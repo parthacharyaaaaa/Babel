@@ -52,7 +52,7 @@ class Translation_Request(db.Model):
     translated_text = db.Column(db.Text, nullable = False)
 
     #Time Metadata
-    time_requested = db.Column(db.DateTime, nullable = False)
+    time_requested = db.Column(db.DateTime, nullable = False, index = True)
 
     def __init__(self, language_from : str, language_to : str, requsted : str, translated : str, time_requested : datetime) -> None:
         self.language_from = language_from
@@ -77,12 +77,12 @@ class Transcription_Request(db.Model):
 
     #Main Metadata
     id = db.Column(db.Integer, primary_key = True, nullable = False)
-    requestor = db.Column(db.Integer, db.ForeignKey("users.id"), nullable = False)
+    requested_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable = False)
     language = db.Column(db.String(16), nullable = False, default = "Eng")
     transcipted_text = db.Column(db.Text, nullable = False)
 
     #Time Metadata
-    time_requested = db.Column(db.DateTime, nullable = False)
+    time_requested = db.Column(db.DateTime, nullable = False, index = True)
 
     def __init__(self, language_from : str, language_to : str, requsted : str, transcripted : str, time_requested : datetime) -> None:
         self.language_from = language_from
