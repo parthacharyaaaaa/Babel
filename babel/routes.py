@@ -204,6 +204,9 @@ def translate_text():
                                         language_to=dest_language,
                                         requested_text=original_text,
                                         translated_text=translated_text))
+            db.session.execute(update(User)
+                               .where(User.id == g.decodedToken["sub"])
+                               .values(translations = User.translations + 1))
             db.session.commit()
         except (IntegrityError, DataError, StatementError):
             db.session.rollback()
