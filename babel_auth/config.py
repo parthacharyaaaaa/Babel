@@ -1,7 +1,7 @@
 from datetime import timedelta
 import os
 from dotenv import load_dotenv
-from babel.errors import Missing_Configuration_Error
+from babel.auxillary.errors import Missing_Configuration_Error
 
 CWD = os.path.dirname(__file__)
 load_dotenv()
@@ -22,6 +22,8 @@ class FlaskConfig:
         # Deployment Metadata
         PORT = int(os.environ["PORT"])
         HOST = os.environ["HOST"]
+        RESOURCE_SERVER_ORIGIN = os.environ["RS_DOMAIN"].lower()
+        PROTOCOL = os.environ.get("RS_COMMUNICATION_PROTOCOL", "http").lower()
     except KeyError as e:
         raise Missing_Configuration_Error(f"FAILED TO SETUP CONFIGURATIONS FOR FLASK AUTH APPLICATION AS ENVIRONMENT VARIABLES WERE NOT FOUND (SEE: class Flask_Config at '{__file__}')")
     except TypeError as e:
