@@ -139,7 +139,6 @@ def fetch_history():
 
     return jsonify({"result" : pyReadableResult}), 200
 
-
 #Transcriptions and Translations
 @app.route("/transcript", methods = ["GET"])
 def transcript():
@@ -198,6 +197,17 @@ def translate_text():
 
         translated_text, translation_src = translation_metadata.text, translation_metadata.src
         time_taken = time.time() - start_time
+        try:
+            db.session.execute(insert(Translation_Request)
+                               .values(requested_by=g.decodedToken["sub"],
+                                        language_from=translation_src,
+                                        language_to=dest_language,
+                                        requested_text=original_text,
+                                        translated_text=translated_text))
+            db.session.commit()
+        except (IntegrityError, DataError, StatementError):
+            db.session.rollback()
+            abort(500)
 
         return jsonify({"translated-text" : translated_text, "src" : translation_src, "time" : time_taken}), 200
 
