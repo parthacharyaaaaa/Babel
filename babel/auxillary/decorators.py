@@ -5,7 +5,7 @@ from auxillary.errors import Unexpected_Request_Format
 from werkzeug.exceptions import Unauthorized
 from datetime import timedelta
 
-def token_required(endpoint) -> None:
+def token_required(endpoint):
     def wrapper(*args, **kwargs):
         try:
             auth_metadata = request.headers.get("Authorization", request.headers.get("authorization", None))
