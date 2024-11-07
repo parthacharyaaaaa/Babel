@@ -6,6 +6,10 @@ import os
 import base64
 import time
 from datetime import datetime, timedelta
+from typing import TypeAlias
+
+# Aliases
+tokenPair : TypeAlias = tuple[str, str]
 
 class TokenManager:
     '''### Class for issuing and verifying access and refresh tokens assosciated with authentication and authorization
@@ -72,7 +76,7 @@ class TokenManager:
                             algorithms = [self.accessHeaders["alg"] if tType == "access" else self.refreshHeaders["alg"]],
                             leeway = self.leeway)
 
-    def reissueTokenPair(self, rToken : str) -> str:
+    def reissueTokenPair(self, rToken : str) -> tokenPair:
         '''Issue a new token pair from a given refresh token
         
         params:
