@@ -1,4 +1,4 @@
-from flask import url_for, redirect, render_template, jsonify, request, abort, g
+from flask import url_for, redirect, jsonify, request, abort, g
 import time
 from babel import app, db, bcrypt
 from babel.models import *
@@ -6,8 +6,9 @@ from babel.config import *
 from babel.auxillary.errors import *
 from babel.transciber import getAudioTranscription
 from googletrans import Translator
-from sqlalchemy import select, insert, update, union_all, Result
+from sqlalchemy import select, insert, update
 from sqlalchemy.exc import IntegrityError, DataError, StatementError
+from auxillary.decorators import token_required
 
 @app.route("/register", methods = ["POST"])
 def register():
@@ -54,6 +55,7 @@ def register():
     
     return jsonify({"message" : "Account Registered Successfully"}), 201
 
+@token_required
 @app.route("/delete-account", methods = ["DELETE"])
 def delete_account():
     if not request.is_json:
@@ -71,7 +73,8 @@ def delete_account():
         db.session.rollback()
         abort(500)
     # Logic for sending an API request to auth server to instantly delete all assosciated refresh tokens
-    
+
+@token_required
 @app.route("/fetch-history", methods = ["GET"])
 def fetch_history():
     if not request.is_json:
@@ -122,6 +125,7 @@ def fetch_history():
 
     return jsonify({"result" : pyReadableResult}), 200
 
+@token_required
 @app.route("/transcript-speech", methods = ["POST"])
 def transcript_speech():
     audio_file = request.files.get("audio-file", None)
@@ -155,6 +159,7 @@ def transcript_speech():
     
     return jsonify({"text" : result["text"], "confidence" : result["confidence"], "time" : time_taken}), 200
 
+@token_required
 @app.route("/translate-text", methods = ["POST"])
 def translate_text():
     try:

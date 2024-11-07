@@ -6,6 +6,10 @@ from werkzeug.exceptions import Unauthorized
 from datetime import timedelta
 
 def token_required(endpoint):
+    '''
+    Protect an endpoint by validating an access token. Requires the header "Authorization: Bearer <credentials>". 
+    Furthermore, sets global data (flask.g : _AppCtxGlobals) for usage of token details in the decorated endpoint
+    '''
     def wrapper(*args, **kwargs):
         try:
             auth_metadata = request.headers.get("Authorization", request.headers.get("authorization", None))
