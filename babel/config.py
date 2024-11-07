@@ -2,7 +2,7 @@ from datetime import timedelta
 import os
 import json
 from dotenv import load_dotenv
-from babel.errors import Missing_Configuration_Error
+from babel.auxillary.errors import Missing_Configuration_Error
 
 CWD = os.path.dirname(__file__)
 load_dotenv()

@@ -3,7 +3,7 @@ import time
 from babel import app, db, bcrypt
 from babel.models import *
 from babel.config import *
-from babel.errors import *
+from babel.auxillary.errors import *
 from babel.transciber import getAudioTranscription
 from googletrans import Translator
 from sqlalchemy import select, insert, update, union_all, Result
