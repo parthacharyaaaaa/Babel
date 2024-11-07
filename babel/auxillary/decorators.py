@@ -1,16 +1,18 @@
 from jwt import decode, PyJWTError, ExpiredSignatureError
 from flask import request, g
 import os
-from auxillary.errors import Unexpected_Request_Format
+from babel.auxillary.errors import Unexpected_Request_Format
 from werkzeug.exceptions import Unauthorized
 from datetime import timedelta
+import functools
 
 def token_required(endpoint):
     '''
     Protect an endpoint by validating an access token. Requires the header "Authorization: Bearer <credentials>". 
     Furthermore, sets global data (flask.g : _AppCtxGlobals) for usage of token details in the decorated endpoint
     '''
-    def wrapper(*args, **kwargs):
+    @functools.wraps(endpoint)
+    def decorated(*args, **kwargs):
         try:
             auth_metadata = request.headers.get("Authorization", request.headers.get("authorization", None))
             if not auth_metadata:
@@ -32,4 +34,4 @@ def token_required(endpoint):
             raise Unauthorized("JWT token invalid")
         
         return endpoint(*args, **kwargs)
-    return wrapper()
+    return decorated
