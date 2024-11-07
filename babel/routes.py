@@ -9,18 +9,6 @@ from googletrans import Translator
 from sqlalchemy import select, insert, update, union_all, Result
 from sqlalchemy.exc import IntegrityError, DataError, StatementError
 
-#View Functions
-#Homepage
-@app.route("/", methods = ["GET", "POST"])
-def home():
-    return render_template("home.html")
-
-#Account Management (Signup, Login, Logout, Deletion)
-@app.route("/signup", methods = ["GET"])
-@app.route("/login", methods = ["GET"])
-def auth():
-    return render_template("auth.html", form_type=request.path[1:])
-
 @app.route("/register", methods = ["POST"])
 def register():
     if not request.is_json:
@@ -83,11 +71,6 @@ def delete_account():
         db.session.rollback()
         abort(500)
     # Logic for sending an API request to auth server to instantly delete all assosciated refresh tokens
-
-#History Management
-@app.route("/history", methods = ["GET"])
-def history():
-   return render_template("history.html")
     
 @app.route("/fetch-history", methods = ["GET"])
 def fetch_history():
@@ -138,15 +121,6 @@ def fetch_history():
     pyReadableResult : list = [row._asdict() for row in qResult]
 
     return jsonify({"result" : pyReadableResult}), 200
-
-#Transcriptions and Translations
-@app.route("/transcript", methods = ["GET"])
-def transcript():
-    return render_template("transcript.html")
-
-@app.route("/translate", methods = ["GET"])
-def translate():
-    return render_template("translate.html")
 
 @app.route("/transcript-speech", methods = ["POST"])
 def transcript_speech():
