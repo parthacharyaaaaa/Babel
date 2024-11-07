@@ -163,7 +163,23 @@ def transcript_speech():
     #Transcripting audio
     print(filepath)
     result = getAudioTranscription(filepath)
-    return jsonify({"text" : result["text"], "confidence" : result["confidence"], "time" : time.time() - starting_time}), 200
+    time_taken = starting_time - time.time()
+
+    try:
+        db.session.execute(insert(Transcription_Request)
+                           .values(requested_by=g.decodedToken["sub"],
+                                   language="en",
+                                   transcripted_text=result["text"],
+                                   time_requested=starting_time))
+        db.session.execute(update(User)
+                           .where(User.id == g.decodedToken["sub"])
+                           .values(transcriptions=User.transcriptions + 1))
+        db.session.commit()
+    except (IntegrityError, DataError, ValueError):
+        db.session.rollback()
+        abort(500)
+    
+    return jsonify({"text" : result["text"], "confidence" : result["confidence"], "time" : time_taken}), 200
 
 @app.route("/translate-text", methods = ["POST"])
 def translate_text():
