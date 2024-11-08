@@ -4,7 +4,7 @@ from sqlalchemy import CheckConstraint
 class Token(db.Model):
     __tablename__ = "tokens"
     # JWT Metadata
-    jit = db.Column(db.Integer, primary_key = True, unique = True, nullable = True)
+    jit = db.Column(db.String(16), primary_key = True, unique = True, nullable = True)
     sub = db.Column(db.Integer, unique = False, nullable = False)
     iat = db.Column(db.Integer, unique = False, nullable = False)
     exp = db.Column(db.Integer, unique = False, nullable = False)
