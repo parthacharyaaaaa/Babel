@@ -18,6 +18,11 @@ class Flask_Config:
         PERMANENT_SESSION_LIFETIME = timedelta(days=int(os.environ["SESSION_LIFETIME"]))
         UPLOAD_FOLDER = os.path.join(CWD, os.environ["UPLOAD_FOLDER"])
         MAX_CONTENT_LENGTH = int(os.environ["MAX_CONTENT_LENGTH"])
+
+        # Auth Server Communication Metadata
+        AUTH_SERVER_ORIGIN = os.environ["AUTH_SERVER_ADDRESS"]
+        AUTH_COMMUNICATION_PROTOCOL = os.environ.get("AUTH_SERVER_COMMUNICATION_PROTOCOL", "http")
+
     except KeyError as e:
         raise Missing_Configuration_Error(f"FAILED TO SETUP CONFIGURATIONS FOR FLASK APPLICATION AS ENVIRONMENT VARIABLES WERE NOT FOUND (SEE: class Flask_Config at '{__file__}')")
     except TypeError as e:
