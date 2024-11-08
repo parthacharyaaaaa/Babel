@@ -9,6 +9,7 @@ from googletrans import Translator
 from sqlalchemy import select, insert, update
 from sqlalchemy.exc import IntegrityError, DataError, StatementError
 from babel.auxillary.decorators import token_required
+import requests
 
 @app.route("/register", methods = ["POST"])
 def register():
@@ -72,7 +73,10 @@ def delete_account():
     except (DataError, StatementError):
         db.session.rollback()
         abort(500)
+
     # Logic for sending an API request to auth server to instantly delete all assosciated refresh tokens
+    requests.get(url=f"{app.config['AUTH_COMMUNICATION_PROTOCOL']}://{app.config['AUTH_SERVER_ORIGIN']}",
+                 headers={"Refresh" : g.decodedToken["fid"]})
 
 @app.route("/fetch-history", methods = ["GET"])
 @token_required
