@@ -20,10 +20,10 @@ class TokenManager:
     Note: It is best if only a single instance of this class is active'''
 
     activeRefreshTokens : int = 0 # List of non-revoked refresh tokens
-    revocationList : list = []
+    _revocationList : list = []
 
     def __init__(self, secretKey : str,
-                 connString : str,
+                 _connString : str,
                  refreshSchema : dict,
                  accessSchema : dict, 
                  alg : str = "HS256",
@@ -36,7 +36,7 @@ class TokenManager:
         params:
         
         secretKey (str): secret credential for HMAC/RSA or any other encryption algorithm in place\n
-        connString (str): Database URI string for establishing connection to db\n
+        _connString (str): Database URI string for establishing _connection to db\n
         refreshSchema (dict-like): Schema of the refresh token\n
         accessSchema (dict-like): Schema of the access token\n
         alg (str): Algorithm to use for signing, universal to all tokens\n
@@ -44,8 +44,8 @@ class TokenManager:
         uClaims (dict-like): Universal claims to include for both access and refresh tokens\n
         additonalHeaders (dict-like): Additional header information, universal to all tokens'''
 
-        self.conn = sqlite3.connect(connString, uri=True)
-        self.cursor = sqlite3.Cursor(self.conn)
+        self._conn = sqlite3._connect(_connString, uri=True)
+        self._cursor = sqlite3._cursor(self._conn)
 
         # Initialize signing key (HMACSHA256)
         self.secretKey = secretKey
@@ -110,8 +110,8 @@ class TokenManager:
         else:
             payload.update({"fid" : familyID})
         
-        self.cursor.execute("INSERT INTO tokens (jit, sub, iat, exp, ipa, revoked, family_id) VALUES (?,?,?,?,?,?,?)", (payload["jit"], None, payload["iat"], payload["exp"], payload.get("ipa"), False, payload["fid"] if authentication else familyID))
-        self.conn.commit()
+        self._cursor.execute("INSERT INTO tokens (jit, sub, iat, exp, ipa, revoked, family_id) VALUES (?,?,?,?,?,?,?)", (payload["jit"], None, payload["iat"], payload["exp"], payload.get("ipa"), False, payload["fid"] if authentication else familyID))
+        self._conn.commit()
         return jwt.encode(payload=payload,
                           key=self.secretKey,
                           algorithm=self.refreshHeaders["alg"],
@@ -134,10 +134,10 @@ class TokenManager:
         '''Revokes a refresh token, without invalidating the family'''
         try:
             decodedJIT = jwt.decode(rToken, options={"verify_signature":False})["payload"]["jit"] # No need to perform computationally-intensive verification since this method is called internally by TokenManager itself after verification has been done already.
-            self.cursor.execute("UPDATE tokens SET revoked = True WHERE jit = ?", (decodedJIT,))
-            self.conn.commit()
+            self._cursor.execute("UPDATE tokens SET revoked = True WHERE jit = ?", (decodedJIT,))
+            self._conn.commit()
 
-            TokenManager.revocationList.append({"jit" : decodedJIT["jit"], "fid" : decodedJIT["fid"]}) # Dict for now, will replace with Redis store later
+            TokenManager._revocationList.append({"jit" : decodedJIT["jit"], "fid" : decodedJIT["fid"]}) # Dict for now, will replace with Redis store later
             self.decrementActiveTokens()
         except ValueError:
             print("Number of active tokens must be non-negative integer")
@@ -146,8 +146,8 @@ class TokenManager:
 
     def invalidateFamily(self, fID : str) -> None:
         '''Remove entire token family from revocation list and token store'''
-        self.cursor.execute("DELETE FROM tokens WHERE family_id = ?", (fID,))
-        self.conn.commit()
+        self._cursor.execute("DELETE FROM tokens WHERE family_id = ?", (fID,))
+        self._conn.commit()
 
     @staticmethod
     def decrementActiveTokens():
