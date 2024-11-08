@@ -28,8 +28,8 @@ def reissue():
     nAccessToken, nRefreshToken = tokenManager.reissueTokenPair(refreshToken)
     return jsonify({"access" : nAccessToken, "refresh" : nRefreshToken}), 201
 
-@auth.route("/revoke", methods = ["GET"])
-def revoke():
+@auth.route("/purge-family", methods = ["GET"])
+def purgeFamily():
     print(request.authorization)
     familyID = request.headers.get("Authorization").split()[-1]
     if not familyID:
