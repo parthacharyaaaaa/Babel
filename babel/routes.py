@@ -75,7 +75,7 @@ def delete_account():
         abort(500)
 
     # Logic for sending an API request to auth server to instantly delete all assosciated refresh tokens
-    requests.get(url=f"{app.config['AUTH_COMMUNICATION_PROTOCOL']}://{app.config['AUTH_SERVER_ORIGIN']}",
+    requests.get(url=f"{app.config['AUTH_COMMUNICATION_PROTOCOL']}://{app.config['AUTH_SERVER_ORIGIN']}/purge-family",
                  headers={"Refresh" : g.decodedToken["fid"]})
 
 @app.route("/fetch-history", methods = ["GET"])
