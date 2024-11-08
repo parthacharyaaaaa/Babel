@@ -7,9 +7,25 @@ import base64
 import time
 from datetime import datetime, timedelta
 from typing import TypeAlias
+from functools import wraps
 
 # Aliases
 tokenPair : TypeAlias = tuple[str, str]
+
+# Helper
+def singleThreadOnly(func):
+    @wraps(func)
+    def decorated(self, *args, **kwargs):
+        self._connectionData["conn"]= sqlite3.connect(self._connString, uri=True)
+        self._connectionData["cursor"] = sqlite3.Cursor(self._connectionData["conn"])
+        try:
+            op = func(self, *args, **kwargs)
+        finally:
+            self._connectionData["conn"].close()
+            self._connectionData.clear()
+        
+        return op
+    return decorated
 
 class TokenManager:
     '''### Class for issuing and verifying access and refresh tokens assosciated with authentication and authorization
@@ -23,7 +39,7 @@ class TokenManager:
     _revocationList : list = []
 
     def __init__(self, secretKey : str,
-                 _connString : str,
+                 connString : str,
                  refreshSchema : dict,
                  accessSchema : dict, 
                  alg : str = "HS256",
@@ -44,8 +60,8 @@ class TokenManager:
         uClaims (dict-like): Universal claims to include for both access and refresh tokens\n
         additonalHeaders (dict-like): Additional header information, universal to all tokens'''
 
-        self._conn = sqlite3._connect(_connString, uri=True)
-        self._cursor = sqlite3._cursor(self._conn)
+        self._connString = connString
+        self._connectionData = dict()
 
         # Initialize signing key (HMACSHA256)
         self.secretKey = secretKey
@@ -68,6 +84,7 @@ class TokenManager:
 
         # Set leeway for time-related claims
         self.leeway = leeway
+
 
     def decodeToken(self, token : str, checkAdditionals : bool = True, tType : str = "access") -> str:
         '''Decodes an access token, raises error in case of failure'''
@@ -95,6 +112,7 @@ class TokenManager:
         
         return refreshToken, accessToken
 
+    @singleThreadOnly
     def issueRefreshToken(self, additionalClaims : Optional[dict] = None, authentication : bool = False, familyID : Optional[str] = None) -> str:
         payload : dict = {"iat" : time.mktime(datetime.now().timetuple()),
                           "exp" : time.mktime((datetime.now() + self.refreshLifetime).timetuple()),
@@ -102,40 +120,46 @@ class TokenManager:
                           
                           "jit" : self.generate_unique_identifier()}
         payload.update(self.uClaims)
-        payload.update(additionalClaims)
+        if additionalClaims:
+            payload.update(additionalClaims)
 
         if authentication:
             TokenManager.activeRefreshTokens += 1
-            payload.update({"fid" : self.generate_unique_identifier()})
+            payload["fid"] = self.generate_unique_identifier()
         else:
-            payload.update({"fid" : familyID})
-        
-        self._cursor.execute("INSERT INTO tokens (jit, sub, iat, exp, ipa, revoked, family_id) VALUES (?,?,?,?,?,?,?)", (payload["jit"], None, payload["iat"], payload["exp"], payload.get("ipa"), False, payload["fid"] if authentication else familyID))
-        self._conn.commit()
+            payload["fid"] = familyID
+
+            print(payload["fid"])
+
+        self._connectionData["cursor"].execute("INSERT INTO tokens (jit, sub, iat, exp, ipa, revoked, family_id) VALUES (?,?,?,?,?,?,?)",
+                             (payload["jit"], "", payload["iat"], payload["exp"], payload.get("ipa"), False, payload["fid"] if authentication else familyID))
+        self._connectionData["conn"].commit()
         return jwt.encode(payload=payload,
                           key=self.secretKey,
                           algorithm=self.refreshHeaders["alg"],
                           headers=self.refreshHeaders)
 
-    def issueAccessToken(self, additionalClaims : dict) -> str:
+    def issueAccessToken(self, additionalClaims : Optional[dict] = None) -> str:
         payload : dict = {"iat" : time.mktime(datetime.now().timetuple()),
                           "exp" : time.mktime((datetime.now() + self.accessLifetime).timetuple()),
                           "nbf" : time.mktime((datetime.now() + self.accessLifetime - self.leeway).timetuple()),
                           
                           "jit" : self.generate_unique_identifier()}
         payload.update(self.uClaims)
-        payload.update(additionalClaims)
+        if additionalClaims:
+            payload.update(additionalClaims)
         return jwt.encode(payload=payload,
                           key=self.secretKey,
                           algorithm=self.accessHeaders["alg"],
                           headers=self.accessHeaders)
 
+    @singleThreadOnly
     def revokeToken(self, rToken : str) -> None:
         '''Revokes a refresh token, without invalidating the family'''
         try:
             decodedJIT = jwt.decode(rToken, options={"verify_signature":False})["payload"]["jit"] # No need to perform computationally-intensive verification since this method is called internally by TokenManager itself after verification has been done already.
-            self._cursor.execute("UPDATE tokens SET revoked = True WHERE jit = ?", (decodedJIT,))
-            self._conn.commit()
+            self._connectionData["cursor"].execute("UPDATE tokens SET revoked = True WHERE jit = ?", (decodedJIT,))
+            self._connectionData["conn"].commit()
 
             TokenManager._revocationList.append({"jit" : decodedJIT["jit"], "fid" : decodedJIT["fid"]}) # Dict for now, will replace with Redis store later
             self.decrementActiveTokens()
@@ -144,10 +168,11 @@ class TokenManager:
         except Exception as e:
             print("Error in revocation")
 
+    @singleThreadOnly
     def invalidateFamily(self, fID : str) -> None:
         '''Remove entire token family from revocation list and token store'''
-        self._cursor.execute("DELETE FROM tokens WHERE family_id = ?", (fID,))
-        self._conn.commit()
+        self._connectionData["cursor"].execute("DELETE FROM tokens WHERE family_id = ?", (fID,))
+        self._connectionData["conn"].commit()
 
     @staticmethod
     def decrementActiveTokens():
