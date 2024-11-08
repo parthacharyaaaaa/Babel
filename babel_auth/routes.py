@@ -1,6 +1,6 @@
 from babel_auth import auth, tokenManager
 from flask import request, abort, jsonify, Response
-from werkzeug.exceptions import BadRequestKeyError
+from werkzeug.exceptions import BadRequestKeyError, BadRequest
 
 @auth.route("/login", methods = ["POST"])
 def login():
@@ -30,12 +30,11 @@ def reissue():
 
 @auth.route("/purge-family", methods = ["GET"])
 def purgeFamily():
-    print(request.authorization)
-    familyID = request.headers.get("Authorization").split()[-1]
+    familyID = request.headers.get("Refresh", request.headers.get("refresh"))
     if not familyID:
-        raise BadRequestKeyError("Revokation requires refresh token to be given")
+        raise BadRequest(f"Invalid Refresh Token provided to [{request.method}] {request.url_rule}")
     
-    tokenManager.invalidateFamily(request.headers.get("Authorization")["fid"])
+    tokenManager.invalidateFamily(familyID)
     response : Response = jsonify({"message" : "Token Revoked"})
     response.headers["iss"] = "babel-auth-service"
 
