@@ -2,14 +2,21 @@ from babel_auth import auth, tokenManager
 from flask import request, abort, jsonify, Response
 from werkzeug.exceptions import BadRequest
 from datetime import datetime
+import requests
 
 @auth.route("/login", methods = ["POST"])
 def login():
     if not request.is_json:
         raise BadRequest()
-    authentication_data = request.get_json()
+    authentication_data = request.get_json(force=True, silent=False)
     if not ("identity" in authentication_data and "password" in authentication_data):
         raise BadRequest()
+    
+    valid = requests.post(f"{auth.config['PROTOCOL']}://{auth.config['RESOURCE_SERVER_ORIGIN']}/validate-user",
+                          json = {"identity" : authentication_data["identity"], "password" : authentication_data["password"]})
+    
+    if valid.status_code != 200:
+        return jsonify({"message" : "incorrect login/pass"}), 401
     
     aToken = tokenManager.issueAccessToken()
     rToken = tokenManager.issueRefreshToken(familyID=1)
@@ -47,6 +54,9 @@ def reissue():
 
 @auth.route("/purge-family", methods = ["GET"])
 def purgeFamily():
+    '''
+    Purges an entire token family in case of a reuse attack or a normal client logout
+    '''
     familyID = request.headers.get("Refresh", request.headers.get("refresh"))
     if not familyID:
         raise BadRequest(f"Invalid Refresh Token provided to [{request.method}] {request.url_rule}")
