@@ -5,4 +5,4 @@ if __name__ == "__main__":
     with auth.app_context():
         db.create_all()
     
-    auth.run(host=auth.config["HOST"], port = auth.config["PORT"])
+    auth.run(host=auth.config["HOST"], port = auth.config["PORT"], debug=True)
