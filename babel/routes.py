@@ -11,6 +11,12 @@ from sqlalchemy.exc import IntegrityError, DataError, StatementError, SQLAlchemy
 from babel.auxillary.decorators import token_required
 import requests
 
+@app.errorhandler(Unexpected_Request_Format)
+def unexpected_request_format(e):
+    response = jsonify({"message" : e.message})
+    response.headers.update({"issuer" : "babel-auth-flow"})
+    return response, 400
+
 @app.route("/register", methods = ["POST"])
 def register():
     if not request.is_json:
