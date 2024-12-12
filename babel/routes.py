@@ -4,12 +4,19 @@ from babel import app, db, bcrypt
 from babel.models import *
 from babel.config import *
 from babel.auxillary.errors import *
+from werkzeug.exceptions import Unauthorized
 from babel.transciber import getAudioTranscription
 from googletrans import Translator
 from sqlalchemy import select, insert, update
 from sqlalchemy.exc import IntegrityError, DataError, StatementError, SQLAlchemyError
-from babel.auxillary.decorators import token_required
+from babel.auxillary.decorators import token_required, private
 import requests
+
+@app.errorhandler(Unauthorized)
+def forbidden(e):
+    response = jsonify({"message" : e.description})
+    response.headers.update({"issuer" : "babel-auth-flow"})
+    return response, 403
 
 @app.errorhandler(Unexpected_Request_Format)
 def unexpected_request_format(e):
@@ -18,6 +25,7 @@ def unexpected_request_format(e):
     return response, 400
 
 @app.route("/register", methods = ["POST"])
+@private
 def register():
     if not request.is_json:
         raise Unexpected_Request_Format(f"POST /{request.path[1:]} Only accepts JSON requests")
@@ -65,6 +73,7 @@ def register():
     return jsonify({"message" : "Account Registered Successfully"}), 201
 
 @app.route("/validate-user", methods = ["POST"])
+@private
 def validateUser():
     if not request.is_json:
         raise Unexpected_Request_Format(f"POST /{request.root_path} Only accepts JSON requests")
@@ -88,7 +97,6 @@ def validateUser():
         return jsonify({"message" : "User Authenticated", "auth" : 1}), 200
     except KeyError:
         raise Unexpected_Request_Format()
-
 
 @app.route("/delete-account", methods = ["DELETE"])
 @token_required
