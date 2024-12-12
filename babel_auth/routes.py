@@ -30,6 +30,30 @@ def authenticate():
 
     return response, 201
 
+@auth.route("/register", methods = ["POST"])
+def register():
+    if not request.is_json:
+        raise BadRequest()
+    
+    valid = requests.post(f"{auth.config['PROTOCOL']}://{auth.config['RESOURCE_SERVER_ORIGIN']}/register",
+                          json = request.get_json(force=True, silent=False))
+    
+    if valid.status_code != 200:
+        return jsonify({"message" : "Failed to create account",
+                        "response_message" : valid.json().get("message", "Sowwy >:3")}), valid.status_code
+    
+    aToken = tokenManager.issueAccessToken()
+    rToken = tokenManager.issueRefreshToken(familyID = tokenManager.generate_unique_identifier())
+
+    response = jsonify({
+        "access" : aToken,
+        "refresh" : rToken,
+        "time_of_issuance" : datetime.now(),
+        "issuer" : "babel-auth-service"
+    })
+
+    return response, 201
+
 @auth.route("/delete-account", methods = ["DELETE"])
 def deleteAccount():
     ...
