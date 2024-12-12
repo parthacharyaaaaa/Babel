@@ -7,7 +7,7 @@ from babel.auxillary.errors import *
 from babel.transciber import getAudioTranscription
 from googletrans import Translator
 from sqlalchemy import select, insert, update
-from sqlalchemy.exc import IntegrityError, DataError, StatementError
+from sqlalchemy.exc import IntegrityError, DataError, StatementError, SQLAlchemyError
 from babel.auxillary.decorators import token_required
 import requests
 
@@ -17,6 +17,7 @@ def register():
         raise Unexpected_Request_Format(f"POST /{request.path[1:]} Only accepts JSON requests")
     
     registrationDetails = request.get_json(force=True)
+    print(registrationDetails)
     try:
         uname : str = registrationDetails["username"]
         email : str = registrationDetails["email"]
@@ -55,6 +56,32 @@ def register():
         abort(500)
     
     return jsonify({"message" : "Account Registered Successfully"}), 201
+
+@app.route("/validate-user", methods = ["POST"])
+def validateUser():
+    if not request.is_json:
+        raise Unexpected_Request_Format(f"POST /{request.root_path} Only accepts JSON requests")
+    
+    try:
+        userMetadata = request.get_json(force=True, silent=False)
+        identity = userMetadata["identity"]
+        password = userMetadata["password"]
+        if "@" in identity:
+            user = db.session.execute(select(User).where(User.email_id == identity)).scalar_one_or_none()
+        else:
+            user = db.session.execute(select(User).where(User.username == identity)).scalar_one_or_none()
+
+        if not user:
+            return jsonify({"message":"User does not exist"}), 404
+        
+        if not bcrypt.check_password_hash(pw_hash=user.password,
+                                          password=password):
+            return jsonify({"message" : "Incorrect username or password"}), 401
+        
+        return jsonify({"message" : "User Authenticated", "auth" : 1}), 200
+    except KeyError:
+        raise Unexpected_Request_Format()
+
 
 @app.route("/delete-account", methods = ["DELETE"])
 @token_required
