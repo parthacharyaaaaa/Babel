@@ -4,8 +4,8 @@ from werkzeug.exceptions import BadRequest
 from datetime import datetime
 import requests
 
-@auth.route("/login", methods = ["POST"])
-def login():
+@auth.route("/authenticate", methods = ["POST"])
+def authenticate():
     if not request.is_json:
         raise BadRequest()
     authentication_data = request.get_json(force=True, silent=False)
@@ -19,7 +19,7 @@ def login():
         return jsonify({"message" : "incorrect login/pass"}), 401
     
     aToken = tokenManager.issueAccessToken()
-    rToken = tokenManager.issueRefreshToken(familyID=1)
+    rToken = tokenManager.issueRefreshToken(familyID = tokenManager.generate_unique_identifier())
 
     response = jsonify({
         "access" : aToken,
@@ -29,10 +29,6 @@ def login():
     })
 
     return response, 201
-
-@auth.route("/signup", methods = ["POST"])
-def signup():
-    ...
 
 @auth.route("/delete-account", methods = ["DELETE"])
 def deleteAccount():

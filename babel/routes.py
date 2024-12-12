@@ -23,6 +23,7 @@ def register():
         email : str = registrationDetails["email"]
         password : str = registrationDetails["pass"]
         cpassword : str = registrationDetails["cpass"]
+        authProvider : str = registrationDetails["authProvider"]
 
         if password != cpassword:
             raise ValueError
