@@ -1,5 +1,5 @@
 from jwt import decode, PyJWTError, ExpiredSignatureError
-from flask import request, g
+from flask import request, g, abort
 import os
 from babel.auxillary.errors import Unexpected_Request_Format
 from werkzeug.exceptions import Unauthorized
@@ -33,5 +33,14 @@ def token_required(endpoint):
         except PyJWTError:
             raise Unauthorized("JWT token invalid")
         
+        return endpoint(*args, **kwargs)
+    return decorated
+
+def private(endpoint):
+    @functools.wraps(endpoint)
+    def decorated(*args, **kwargs):
+        print("running")
+        if request.headers.get("AUTH-API-KEY") != os.environ.get("AUTH_API_KEY", -1):
+               raise Unauthorized("Access Denied >:(")
         return endpoint(*args, **kwargs)
     return decorated
