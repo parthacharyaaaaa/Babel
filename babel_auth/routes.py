@@ -35,8 +35,10 @@ def authenticate():
         return jsonify({"message" : "Authentication Failed",
                         "response_message" : valid.json().get("message", "None")}), valid.status_code
     
-    aToken = tokenManager.issueAccessToken()
-    rToken = tokenManager.issueRefreshToken(familyID = tokenManager.generate_unique_identifier())
+    subject = valid.json()["sub"]
+    aToken = tokenManager.issueAccessToken(sub = subject)
+    rToken = tokenManager.issueRefreshToken(sub = subject,
+                                            familyID = tokenManager.generate_unique_identifier())
 
     response = jsonify({
         "access" : aToken,
@@ -72,8 +74,10 @@ def register():
         return jsonify({"message" : "Failed to create account",
                         "response_message" : valid.json().get("message", "Sowwy >:3")}), valid.status_code
     
-    aToken = tokenManager.issueAccessToken()
-    rToken = tokenManager.issueRefreshToken(familyID = tokenManager.generate_unique_identifier())
+    subject = valid.json()["sub"]
+    aToken = tokenManager.issueAccessToken(sub = subject)
+    rToken = tokenManager.issueRefreshToken(sub = subject,
+                                            familyID = tokenManager.generate_unique_identifier())
 
     response = jsonify({
         "access" : aToken,
