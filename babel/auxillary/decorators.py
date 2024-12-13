@@ -48,7 +48,7 @@ def enforce_mimetype(mimetype : str):
     def inner_dec(endpoint):
         @functools.wraps(endpoint)
         def decorated(*args, **kwargs):
-            if request.mimetype.split()[-1] != mimetype.lower():
+            if request.mimetype.split("/")[-1] != mimetype.lower():
                 raise Unexpected_Request_Format("Invalid mimetype forwarded to the endpoint")
             return endpoint(*args, **kwargs)
         return decorated
