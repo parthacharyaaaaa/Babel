@@ -5,6 +5,20 @@ from datetime import datetime
 import requests
 import os
 
+### Error Handlers ###
+@auth.errorhandler(ValueError)
+@auth.errorhandler(BadRequest)
+def badRequest(e):
+    message = "Bad Request: Check message format!" if not hasattr(e, "description") else e.description
+    rBody = {"message" : message}
+    if hasattr(e, "_additional_info"):
+        rBody.update({"additional details" : e._additional_info})
+
+    response = jsonify(rBody)
+    response.headers.update({"issuer" : "babel-auth-service"})
+
+    return response, 400
+
 @auth.route("/authenticate", methods = ["POST"])
 def authenticate():
     if not request.is_json:
@@ -34,7 +48,7 @@ def authenticate():
 @auth.route("/register", methods = ["POST"])
 def register():
     if not request.is_json:
-        raise BadRequest()
+        raise BadRequest("Only JSON mimetype accepted by POST /register")
     
     registrationDetails : dict = request.get_json(force=True, silent=False)
     
@@ -42,10 +56,10 @@ def register():
             "email" in registrationDetails and
             "password" in registrationDetails and
             "cpassword" in registrationDetails):
-        raise BadRequest()
+        raise BadRequest("Mandatory field missing")
     
     if registrationDetails["password"] != registrationDetails["cpassword"]:
-        raise ValueError()
+        raise BadRequest("Passwords do not match")
     
     registrationDetails.update({"authprovider" : "babel-auth"})
     valid = requests.post(f"{auth.config['PROTOCOL']}://{auth.config['RESOURCE_SERVER_ORIGIN']}/register",
