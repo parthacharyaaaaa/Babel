@@ -3,6 +3,7 @@ from flask import request, abort, jsonify, Response
 from werkzeug.exceptions import BadRequest
 from datetime import datetime
 import requests
+import os
 
 @auth.route("/authenticate", methods = ["POST"])
 def authenticate():
@@ -35,8 +36,21 @@ def register():
     if not request.is_json:
         raise BadRequest()
     
+    registrationDetails : dict = request.get_json(force=True, silent=False)
+    
+    if not ("username" in registrationDetails and
+            "email" in registrationDetails and
+            "password" in registrationDetails and
+            "cpassword" in registrationDetails):
+        raise BadRequest()
+    
+    if registrationDetails["password"] != registrationDetails["cpassword"]:
+        raise ValueError()
+    
+    registrationDetails.update({"authprovider" : "babel-auth"})
     valid = requests.post(f"{auth.config['PROTOCOL']}://{auth.config['RESOURCE_SERVER_ORIGIN']}/register",
-                          json = request.get_json(force=True, silent=False))
+                          json = registrationDetails,
+                          headers={"AUTH-API-KEY" : os.environ["AUTH_API_KEY"]})
     
     if valid.status_code != 200:
         return jsonify({"message" : "Failed to create account",
