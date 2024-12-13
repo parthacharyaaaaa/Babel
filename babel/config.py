@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from babel.auxillary.errors import Missing_Configuration_Error
 
 CWD = os.path.dirname(__file__)
-load_dotenv()
+load_dotenv(os.path.join(CWD, ".env"), override=True)
 
 class Flask_Config:
     """Flask app configuration."""
