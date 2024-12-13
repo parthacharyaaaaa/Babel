@@ -10,6 +10,7 @@ class FlaskConfig:
     try:
         # Security Metadata
         SECRET_KEY = os.environ["SECRET_KEY"]
+        SIGNING_KEY = os.environ["SIGNING_KEY"]
         SESSION_COOKIE_SECURE = bool(os.environ["SESSION_COOKIE_SECURE"])
 
         # Database Metadata
