@@ -38,7 +38,7 @@ class TokenManager:
     activeRefreshTokens : int = 0 # List of non-revoked refresh tokens
     _revocationList : list = []
 
-    def __init__(self, secretKey : str,
+    def __init__(self, signingKey : str,
                  connString : str,
                  refreshSchema : dict,
                  accessSchema : dict, 
@@ -51,7 +51,7 @@ class TokenManager:
         
         params:
         
-        secretKey (str): secret credential for HMAC/RSA or any other encryption algorithm in place\n
+        signingKey (str): secret credential for HMAC/RSA or any other encryption algorithm in place\n
         _connString (str): Database URI string for establishing _connection to db\n
         refreshSchema (dict-like): Schema of the refresh token\n
         accessSchema (dict-like): Schema of the access token\n
@@ -64,7 +64,7 @@ class TokenManager:
         self._connectionData = dict()
 
         # Initialize signing key (HMACSHA256)
-        self.secretKey = secretKey
+        self.signingKey = signingKey
 
         # Initialize universal headers, common to all tokens issued in any context
         uHeader = {"typ" : typ, "alg" : alg}
@@ -89,7 +89,7 @@ class TokenManager:
     def decodeToken(self, token : str, checkAdditionals : bool = True, tType : str = "access") -> str:
         '''Decodes an access token, raises error in case of failure'''
         return jwt.decode(jwt = token,
-                            key = self.secretKey,
+                            key = self.signingKey,
                             algorithms = [self.accessHeaders["alg"] if tType == "access" else self.refreshHeaders["alg"]],
                             leeway = self.leeway)
 
@@ -135,7 +135,7 @@ class TokenManager:
                              (payload["jit"], "", payload["iat"], payload["exp"], payload.get("ipa"), False, payload["fid"] if authentication else familyID))
         self._connectionData["conn"].commit()
         return jwt.encode(payload=payload,
-                          key=self.secretKey,
+                          key=self.signingKey,
                           algorithm=self.refreshHeaders["alg"],
                           headers=self.refreshHeaders)
 
@@ -143,13 +143,14 @@ class TokenManager:
         payload : dict = {"iat" : time.mktime(datetime.now().timetuple()),
                           "exp" : time.mktime((datetime.now() + self.accessLifetime).timetuple()),
                           "nbf" : time.mktime((datetime.now() + self.accessLifetime - self.leeway).timetuple()),
+                          "iss" : "babel-auth-service",
                           
                           "jit" : self.generate_unique_identifier()}
         payload.update(self.uClaims)
         if additionalClaims:
             payload.update(additionalClaims)
         return jwt.encode(payload=payload,
-                          key=self.secretKey,
+                          key=self.signingKey,
                           algorithm=self.accessHeaders["alg"],
                           headers=self.accessHeaders)
 
