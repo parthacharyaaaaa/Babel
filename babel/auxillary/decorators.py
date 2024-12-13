@@ -1,4 +1,4 @@
-from jwt import decode, PyJWTError, ExpiredSignatureError
+from jwt import decode, PyJWTError, ExpiredSignatureError, DecodeError
 from flask import request, g, abort
 import os
 from babel.auxillary.errors import Unexpected_Request_Format
@@ -28,8 +28,10 @@ def token_required(endpoint):
         except KeyError as e:
             raise Unexpected_Request_Format(f"Endpoint /{request.path[1:]} requires an authorization token to give access to resource")
         except ExpiredSignatureError:
-            raise  Unauthorized("JWT token expired, begin refresh issuance")
-        except PyJWTError:
+            raise Unauthorized("JWT token expired, begin refresh issuance")
+        except DecodeError:
+            raise Unauthorized("Decode Error")
+        except PyJWTError as e:
             raise Unauthorized("JWT token invalid")
         
         return endpoint(*args, **kwargs)
