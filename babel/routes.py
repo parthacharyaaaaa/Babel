@@ -191,15 +191,11 @@ def transcript_speech():
     return jsonify({"text" : result["text"], "confidence" : result["confidence"], "time" : time_taken}), 200
 
 @app.route("/translate-text", methods = ["POST"])
-@enforce_mimetype("form-data")
+@enforce_mimetype("JSON")
 @token_required
 def translate_text():
     try:
-        #Ensure response integrity
-        if not request.is_json:         #JSON Serialize check
-            raise Unexpected_Request_Format("Response is not JSON serialized")
-        
-        translation_request = request.get_json(force=True, silent=False)            #Parsing JSON response, silent is kept at False just as a second measure in case .is_json fails
+        translation_request = request.get_json(force=True, silent=False)
 
         original_text : str = translation_request["text"]
         dest_language : str = translation_request["dest"].lower()
@@ -208,7 +204,7 @@ def translate_text():
 
         #Validating strings
         if original_text.strip() == "" or dest_language.strip() == "":
-            raise ValueError("Invalid Request")
+            raise ValueError()
 
         #Validating requested languages
         if dest_language not in AVAILABLE_LANGUAGES:
