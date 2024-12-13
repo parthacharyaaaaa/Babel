@@ -113,11 +113,12 @@ class TokenManager:
         return refreshToken, accessToken
 
     @singleThreadOnly
-    def issueRefreshToken(self, additionalClaims : Optional[dict] = None, authentication : bool = False, familyID : Optional[str] = None) -> str:
+    def issueRefreshToken(self, sub : str, additionalClaims : Optional[dict] = None, authentication : bool = False, familyID : Optional[str] = None) -> str:
         payload : dict = {"iat" : time.mktime(datetime.now().timetuple()),
                           "exp" : time.mktime((datetime.now() + self.refreshLifetime).timetuple()),
                           "nbf" : time.mktime((datetime.now() + self.refreshLifetime - self.leeway).timetuple()),
-                          
+
+                          "sub" : sub,
                           "jit" : self.generate_unique_identifier()}
         payload.update(self.uClaims)
         if additionalClaims:
@@ -139,12 +140,12 @@ class TokenManager:
                           algorithm=self.refreshHeaders["alg"],
                           headers=self.refreshHeaders)
 
-    def issueAccessToken(self, additionalClaims : Optional[dict] = None) -> str:
+    def issueAccessToken(self, sub : str, additionalClaims : Optional[dict] = None) -> str:
         payload : dict = {"iat" : time.mktime(datetime.now().timetuple()),
                           "exp" : time.mktime((datetime.now() + self.accessLifetime).timetuple()),
-                          "nbf" : time.mktime((datetime.now() + self.accessLifetime - self.leeway).timetuple()),
                           "iss" : "babel-auth-service",
                           
+                          "sub" : sub,
                           "jit" : self.generate_unique_identifier()}
         payload.update(self.uClaims)
         if additionalClaims:
