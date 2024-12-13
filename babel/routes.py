@@ -30,8 +30,8 @@ def unexpected_request_format(e):
 def register():
     registrationDetails = request.get_json(force=True, silent=False)
     try:
-        uname : str = registrationDetails["username"]
-        email : str = registrationDetails["email"]
+        uname : str = registrationDetails["username"].strip()
+        email : str = registrationDetails["email"].strip()
         password : str = registrationDetails["password"]
 
     except KeyError as k:
@@ -61,7 +61,7 @@ def register():
         db.session.rollback()
         abort(500)
     
-    return jsonify({"message" : "Account Registered Successfully"}), 201
+    return jsonify({"message" : "Account Registered Successfully", "sub" : uname}), 201
 
 @app.route("/validate-user", methods = ["POST"])
 @private
@@ -83,7 +83,7 @@ def validateUser():
                                           password=password):
             return jsonify({"message" : "Incorrect username or password"}), 401
         
-        return jsonify({"message" : "User Authenticated", "auth" : 1}), 200
+        return jsonify({"message" : "User Authenticated", "sub" : user.username}), 200
     except KeyError:
         raise Unexpected_Request_Format()
 
@@ -217,7 +217,6 @@ def translate_text():
         translator = Translator()
 
         translation_metadata = translator.translate(text = original_text, dest = dest_language, src = src_language or 'auto')
-
         translated_text, translation_src = translation_metadata.text, translation_metadata.src
         time_taken = time.time() - start_time
         try:
@@ -226,15 +225,16 @@ def translate_text():
                                         language_from=translation_src,
                                         language_to=dest_language,
                                         requested_text=original_text,
-                                        translated_text=translated_text))
+                                        translated_text=translated_text,
+                                        time_requested=datetime.fromtimestamp(start_time))
+                                )
             db.session.execute(update(User)
-                               .where(User.id == g.decodedToken["sub"])
+                               .where(User.username == g.decodedToken["sub"])
                                .values(translations = User.translations + 1))
             db.session.commit()
         except (IntegrityError, DataError, StatementError):
             db.session.rollback()
             abort(500)
-
         return jsonify({"translated-text" : translated_text, "src" : translation_src, "time" : time_taken}), 200
 
     except Unexpected_Request_Format as e:
