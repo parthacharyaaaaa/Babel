@@ -16,11 +16,10 @@ def token_required(endpoint):
         try:
             auth_metadata = request.headers.get("Authorization", request.headers.get("authorization", None))
             if not auth_metadata:
-                raise KeyError()
-            auth_metadata = auth_metadata.split()[-1]
+                raise Unauthorized("Authentication details missing")
             decodedToken = decode(
-                                jwt=auth_metadata,
-                                key=os.environ["SECRET_KEY"],
+                                jwt=auth_metadata.split()[-1],
+                                key=os.environ["SIGNING_KEY"],
                                 algorithms=["HS256"],
                                 issuer="babel-auth-service",
                                 leeway=timedelta(minutes=3)
