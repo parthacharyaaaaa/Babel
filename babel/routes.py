@@ -9,7 +9,7 @@ from babel.transciber import getAudioTranscription
 from googletrans import Translator
 from sqlalchemy import select, insert, update
 from sqlalchemy.exc import IntegrityError, DataError, StatementError, SQLAlchemyError
-from babel.auxillary.decorators import token_required, private
+from babel.auxillary.decorators import *
 import requests
 
 @app.errorhandler(Unauthorized)
@@ -26,10 +26,8 @@ def unexpected_request_format(e):
 
 @app.route("/register", methods = ["POST"])
 @private
+@enforce_mimetype("JSON")
 def register():
-    if not request.is_json:
-        raise Unexpected_Request_Format(f"POST /{request.path[1:]} Only accepts JSON requests")
-    
     registrationDetails = request.get_json(force=True)
     print(registrationDetails)
     try:
@@ -74,10 +72,8 @@ def register():
 
 @app.route("/validate-user", methods = ["POST"])
 @private
+@enforce_mimetype("JSON")
 def validateUser():
-    if not request.is_json:
-        raise Unexpected_Request_Format(f"POST /{request.root_path} Only accepts JSON requests")
-    
     try:
         userMetadata = request.get_json(force=True, silent=False)
         identity = userMetadata["identity"]
@@ -99,11 +95,9 @@ def validateUser():
         raise Unexpected_Request_Format()
 
 @app.route("/delete-account", methods = ["DELETE"])
+@enforce_mimetype("JSON")
 @token_required
 def delete_account():
-    if not request.is_json:
-        raise Unexpected_Request_Format(f"POST /{request.path[1:]} Only accepts JSON requests")
-    
     password : str = request.get_json(force=True)["password"]
     if not password:
         raise Unexpected_Request_Format(f"POST /{request.path[1:]} Password missing")
@@ -123,9 +117,6 @@ def delete_account():
 @app.route("/fetch-history", methods = ["GET"])
 @token_required
 def fetch_history():
-    if not request.is_json:
-        raise Unexpected_Request_Format(f"POST /{request.path[1:]} Only accepts JSON requests")
-    
     username : str = g.decodedToken.get("sub", None)
 
     viewPreference : str = request.args.get("preference", "all")
@@ -172,6 +163,7 @@ def fetch_history():
     return jsonify({"result" : pyReadableResult}), 200
 
 @app.route("/transcript-speech", methods = ["POST"])
+@enforce_mimetype("form-data")
 @token_required
 def transcript_speech():
     audio_file = request.files.get("audio-file", None)
@@ -206,6 +198,7 @@ def transcript_speech():
     return jsonify({"text" : result["text"], "confidence" : result["confidence"], "time" : time_taken}), 200
 
 @app.route("/translate-text", methods = ["POST"])
+@enforce_mimetype("form-data")
 @token_required
 def translate_text():
     try:

@@ -39,8 +39,17 @@ def token_required(endpoint):
 def private(endpoint):
     @functools.wraps(endpoint)
     def decorated(*args, **kwargs):
-        print("running")
         if request.headers.get("AUTH-API-KEY") != os.environ.get("AUTH_API_KEY", -1):
                raise Unauthorized("Access Denied >:(")
         return endpoint(*args, **kwargs)
     return decorated
+
+def enforce_mimetype(mimetype : str):
+    def inner_dec(endpoint):
+        @functools.wraps(endpoint)
+        def decorated(*args, **kwargs):
+            if request.mimetype.split()[-1] != mimetype.lower():
+                raise Unexpected_Request_Format("Invalid mimetype forwarded to the endpoint")
+            return endpoint(*args, **kwargs)
+        return decorated
+    return inner_dec
