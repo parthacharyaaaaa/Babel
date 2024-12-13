@@ -28,10 +28,12 @@ def authenticate():
         raise BadRequest()
     
     valid = requests.post(f"{auth.config['PROTOCOL']}://{auth.config['RESOURCE_SERVER_ORIGIN']}/validate-user",
-                          json = {"identity" : authentication_data["identity"], "password" : authentication_data["password"]})
+                          json = {"identity" : authentication_data["identity"], "password" : authentication_data["password"]},
+                          headers={"AUTH-API-KEY" : os.environ["AUTH_API_KEY"]})
     
     if valid.status_code != 200:
-        return jsonify({"message" : "incorrect login/pass"}), 401
+        return jsonify({"message" : "Authentication Failed",
+                        "response_message" : valid.json().get("message", "None")}), valid.status_code
     
     aToken = tokenManager.issueAccessToken()
     rToken = tokenManager.issueRefreshToken(familyID = tokenManager.generate_unique_identifier())
