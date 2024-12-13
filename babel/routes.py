@@ -28,21 +28,14 @@ def unexpected_request_format(e):
 @private
 @enforce_mimetype("JSON")
 def register():
-    registrationDetails = request.get_json(force=True)
-    print(registrationDetails)
+    registrationDetails = request.get_json(force=True, silent=False)
     try:
         uname : str = registrationDetails["username"]
         email : str = registrationDetails["email"]
-        password : str = registrationDetails["pass"]
-        cpassword : str = registrationDetails["cpass"]
-        authProvider : str = registrationDetails["authProvider"]
+        password : str = registrationDetails["password"]
 
-        if password != cpassword:
-            raise ValueError
     except KeyError as k:
         raise Unexpected_Request_Format(f"POST /{request.path[1:]} Mandatory field missing")
-    except ValueError as v:
-        raise Unexpected_Request_Format(f"POST /{request.path[1:]} Passwords do not match")
 
     userExists = db.session.execute(select(User).where(User.username == uname)).first()
     emailExists = db.session.execute(select(User).where(User.email_id == email)).first()
