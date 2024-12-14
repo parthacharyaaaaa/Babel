@@ -18,6 +18,7 @@ class Flask_Config:
         PERMANENT_SESSION_LIFETIME = timedelta(days=int(os.environ["SESSION_LIFETIME"]))
         UPLOAD_FOLDER = os.path.join(CWD, os.environ["UPLOAD_FOLDER"])
         MAX_CONTENT_LENGTH = int(os.environ["MAX_CONTENT_LENGTH"])
+        ERROR_LOG_FILE = os.path.join(CWD, os.environ["ERROR_LOG_FILE"])
 
         # Auth Server Communication Metadata
         AUTH_SERVER_ORIGIN = os.environ["AUTH_SERVER_ADDRESS"]
