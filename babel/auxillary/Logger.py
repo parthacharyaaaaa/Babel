@@ -4,11 +4,11 @@ import threading
 import psutil
 from datetime import datetime
 from collections import deque
+import time
 
 '''Interface for logging errors asynchornously to an error log file'''
 class Logger:
 
-    _EVENT_QUEUE = deque()
     _lock = threading.Lock()
     waitlist_length : int = 0
 
@@ -19,6 +19,7 @@ class Logger:
         if not os.path.isfile(fpath):
             raise FileNotFoundError("Invalid filepath provided")
         
+        self._event_queue = deque()
         self.fpath = fpath
         self.check_load = check_load
         self.max_cpu_load = max_cpu_load
@@ -28,7 +29,21 @@ class Logger:
         self.defer_count = 0
         self.max_defers = max_defer_count
 
-    def dumpEntries(self, entries : int = 10):
+        self.background_thread = None
+        self.start_background_task()
+
+    def start_background_task(self):
+        if self.background_thread is None or not self.background_thread.is_alive():
+            self.background_thread = threading.Thread(target=self._run_periodically)
+            self.background_thread.daemon = True
+            self.background_thread.start()
+    
+    def _run_periodically(self):
+        while True:
+            self.loop.call_soon_threadsafe(asyncio.create_task, self.dumpEntries())
+            time.sleep(self.interval)
+
+    async def dumpEntries(self, entries : int = 10):
         if not self.check_resources():
             self.defer_count+=1
             if self.defer_count >= self.max_defers:
@@ -38,19 +53,19 @@ class Logger:
                 self.addEntryToQueue(deferOverflow)
                 self.defer_count = 0
 
-            asyncio.run(self.defer())
+            await self.defer()
             
         with self._lock:
             with open(self.fpath, "a") as logFile:
-                pyFormattedEntry = (f"{Logger._EVENT_QUEUE.popleft()}\n" for _ in range(min(entries, Logger.waitlist_length)))
+                pyFormattedEntry = (f"{self._event_queue.popleft()}\n" for _ in range(min(entries, Logger.waitlist_length)))
                 logFile.writelines(pyFormattedEntry)
-            Logger.waitlist_length -= min(entries, Logger.waitlist_length)
+            Logger.waitlist_length -= min(entries, self.waitlist_length)
 
 
     def addEntryToQueue(self, error : Exception, func : str = "N/A", obj : str = "N/A"):
         entry : str = f"{datetime.now()} - {getattr(error, "description", default = "N/A")}. Additional: {getattr(error, '_additional_info', default = "None Provided")}. Function: {func}, Class: {obj}\n"
         with self._lock:
-            Logger._EVENT_QUEUE.append(entry)
+            self._event_queue.append(entry)
 
     def check_resources(self):
         memory_load = psutil.virtual_memory().percent / 100
