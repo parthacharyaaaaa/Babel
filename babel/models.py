@@ -35,8 +35,8 @@ class User(db.Model):
     
     def format_to_dict(self) -> dict:
         return {"username" : self.username,
-                "time_created" : self.time_created,
-                "last_login" : self.last_login,
+                "time_created" : datetime.isoformat(self.time_created),
+                "last_login" : datetime.isoformat(self.last_login),
                 "transcriptions" : self.transcriptions,
                 "translations" : self.translations}
     
@@ -69,7 +69,7 @@ class Translation_Request(db.Model):
                 "user" : self.requested_by,
                 "original_language" : self.language_from,
                 "translated_language" : self.language_to,
-                "time_requested" : self.time_requested
+                "time_requested" : datetime.isoformat(self.time_requested)
                 }
 
 class Transcription_Request(db.Model):
@@ -98,7 +98,7 @@ class Transcription_Request(db.Model):
         return {"id" : self.id,
                 "user": self.requestor,
                 "language" : self.language, 
-                "time_requested" : self.time_requested}
+                "time_requested" : datetime.isoformat(self.time_requested)}
     
 class Error_Log(db.Model):
     __tablename__ = "error_logs"
@@ -122,5 +122,5 @@ class Error_Log(db.Model):
         return {"id" : self.id,
                 "error_code" : self.error_code,
                 "victim" : self.victim_id,
-                "time_of_error" : self.time,
+                "time_of_error" : datetime.isoformat(self.time),
                 "resolved?" : self.resolved}
