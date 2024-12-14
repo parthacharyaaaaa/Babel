@@ -2,7 +2,7 @@ import requests, time, os
 from babel.config import aai_config
 from typing import Union, Optional
 
-from babel.auxillary.errors import Unexpected_Request_Format, Unexpected_Response_Format, API_TIMEOUT_ERROR
+from babel.auxillary.errors import API_TIMEOUT_ERROR
 
 def upload_audio(headers : dict, file_path : str) -> Optional[str]:
     """Uploads audio file to AssemblyAI
