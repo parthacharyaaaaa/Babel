@@ -1,6 +1,6 @@
 from flask import jsonify, request, abort, g
 import time
-from babel import app, db, bcrypt, REDIS_INTERFACE
+from babel import app, db, bcrypt, REDIS_INTERFACE, ErrorLogger
 from babel.models import *
 from babel.config import *
 from babel.auxillary.errors import *
@@ -12,7 +12,6 @@ from sqlalchemy.exc import IntegrityError, DataError, StatementError, SQLAlchemy
 from babel.auxillary.decorators import *
 import requests
 import json
-
 
 ### Error Handlers ###
 @app.errorhandler(Unauthorized)
@@ -31,8 +30,10 @@ def unexpected_request_format(e : Exception):
     response.headers.update({"issuer" : "babel-auth-flow"})
     return response, 400
 
+# @app.errorhandler(Exception)
 @app.errorhandler(InternalServerError)
 def internalServerError(e : Exception):
+    ErrorLogger.addEntryToQueue(e)
     return jsonify({"message" : getattr(e, "description", "An Error Occured"), "Additional Info" : getattr(e, "_additional_info", "There seems to be an issue with our service, please retry after some time or contact support")}), 500
 
 ### Endpoints ###
@@ -99,7 +100,7 @@ def validateUser():
     except KeyError:
         raise BadRequest(f"{request.method} /{request.root_path} expects mandatory fields: identity, password")
 
-@app.route("/users/<name:str>", methods = ["GET"])
+@app.route("/users/<string:name>", methods = ["GET"])
 def getUser(name):
     try:
         cached_result = REDIS_INTERFACE.execute_command("GET", f"user:{name}")
