@@ -96,7 +96,7 @@ def register():
 @auth.route("/delete-account", methods = ["DELETE"])
 @private
 def deleteAccount():
-    ...
+    tokenManager.invalidateFamily(request.headers["fid"])
 
 @auth.route("/reissue", methods = ["GET"])
 def reissue():
@@ -131,4 +131,8 @@ def purgeFamily():
 
 @auth.route("/ip-blacklist", methods = ["POST"])
 def blacklist():
+    ...
+
+@auth.route("/get-blacklist", methods = ["GET"])
+def getBlacklist():
     ...
