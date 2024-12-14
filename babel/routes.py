@@ -1,17 +1,20 @@
-from flask import url_for, redirect, jsonify, request, abort, g
+from flask import jsonify, request, abort, g
 import time
-from babel import app, db, bcrypt
+from babel import app, db, bcrypt, REDIS_INTERFACE
 from babel.models import *
 from babel.config import *
 from babel.auxillary.errors import *
-from werkzeug.exceptions import Unauthorized
+from werkzeug.exceptions import Unauthorized, FailedDependency, InternalServerError
 from babel.transciber import getAudioTranscription
 from googletrans import Translator
 from sqlalchemy import select, insert, update
 from sqlalchemy.exc import IntegrityError, DataError, StatementError, SQLAlchemyError
 from babel.auxillary.decorators import *
 import requests
+import json
 
+
+### Error Handlers ###
 @app.errorhandler(Unauthorized)
 def forbidden(e):
     response = jsonify({"message" : e.description})
@@ -28,6 +31,11 @@ def unexpected_request_format(e : Exception):
     response.headers.update({"issuer" : "babel-auth-flow"})
     return response, 400
 
+@app.errorhandler(InternalServerError)
+def internalServerError(e : Exception):
+    return jsonify({"message" : getattr(e, "description", "An Error Occured"), "Additional Info" : getattr(e, "_additional_info", "There seems to be an issue with our service, please retry after some time or contact support")}), 500
+
+### Endpoints ###
 @app.route("/register", methods = ["POST"])
 @private
 @enforce_mimetype("JSON")
@@ -90,6 +98,28 @@ def validateUser():
         return jsonify({"message" : "User Authenticated", "sub" : user.username}), 200
     except KeyError:
         raise BadRequest(f"{request.method} /{request.root_path} expects mandatory fields: identity, password")
+
+@app.route("/users/<name:str>", methods = ["GET"])
+def getUser(name):
+    try:
+        cached_result = REDIS_INTERFACE.execute_command("GET", f"user:{name}")
+        if cached_result:
+            return jsonify(cached_result), 200
+    except:
+        ...
+
+    try:
+        user = db.session.execute(select(User).where(User.username == name)).scalar_one_or_none()
+    except:
+        raise InternalServerError("An error occured in fetching user data")
+    if not user:
+        return jsonify({"message" : "User not found",
+                        "additional info" : "Make sure the name is spelt right, and that a user with the given username exists"}), 404
+
+    result = user.format_to_dict()
+    REDIS_INTERFACE.execute_command("SETEX", f"user:{name}", 90, json.dumps(result))
+    return jsonify(result), 200
+
 
 @app.route("/delete-account", methods = ["DELETE"])
 @enforce_mimetype("JSON")
