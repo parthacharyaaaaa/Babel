@@ -1,4 +1,5 @@
 from babel_auth import auth, tokenManager
+from babel_auth.auxillary.decorators import enforce_mimetype, private
 from flask import request, abort, jsonify, Response
 from werkzeug.exceptions import BadRequest
 from datetime import datetime
@@ -6,7 +7,7 @@ import requests
 import os
 
 ### Error Handlers ###
-@auth.errorhandler(ValueError)
+@auth.errorhandler(KeyError)
 @auth.errorhandler(BadRequest)
 def badRequest(e):
     message = "Bad Request: Check message format!" if not hasattr(e, "description") else e.description
@@ -19,13 +20,16 @@ def badRequest(e):
 
     return response, 400
 
+### Endpoints ###
+
 @auth.route("/authenticate", methods = ["POST"])
+@enforce_mimetype("json")
 def authenticate():
     if not request.is_json:
-        raise BadRequest()
+        raise BadRequest(f"POST /{request.root_path} accepts only JSON requests")
     authentication_data = request.get_json(force=True, silent=False)
     if not ("identity" in authentication_data and "password" in authentication_data):
-        raise BadRequest()
+        raise BadRequest(f"POST /{request.root_path} expects identity and password in HTTP body")
     
     valid = requests.post(f"{auth.config['PROTOCOL']}://{auth.config['RESOURCE_SERVER_ORIGIN']}/validate-user",
                           json = {"identity" : authentication_data["identity"], "password" : authentication_data["password"]},
@@ -50,9 +54,10 @@ def authenticate():
     return response, 201
 
 @auth.route("/register", methods = ["POST"])
+@enforce_mimetype("json")
 def register():
     if not request.is_json:
-        raise BadRequest("Only JSON mimetype accepted by POST /register")
+        raise BadRequest(f"Only JSON mimetype accepted by POST /{request.root_path}")
     
     registrationDetails : dict = request.get_json(force=True, silent=False)
     
@@ -89,19 +94,22 @@ def register():
     return response, 201
 
 @auth.route("/delete-account", methods = ["DELETE"])
+@private
 def deleteAccount():
     ...
 
-@auth.route("/reissue", methods = ["POST"])
+@auth.route("/reissue", methods = ["GET"])
 def reissue():
     authMetadata = request.headers.get("Authorization", request.headers.get("authorization", None))
 
     if not authMetadata:
-        raise KeyError()
+        e = KeyError()
+        e.__setattr__("description", "Refresh Token missing from request, reissuance denied")
+        raise e
     
     refreshToken = tokenManager.decodeToken(token=authMetadata,
-                                             checkAdditionals=False,
-                                             tType="refresh")
+                                            checkAdditionals=False,
+                                            tType="refresh")
     
     nAccessToken, nRefreshToken = tokenManager.reissueTokenPair(refreshToken)
     return jsonify({"access" : nAccessToken, "refresh" : nRefreshToken}), 201
