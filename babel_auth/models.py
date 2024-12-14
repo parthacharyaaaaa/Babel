@@ -4,7 +4,7 @@ from sqlalchemy import CheckConstraint
 class Token(db.Model):
     __tablename__ = "tokens"
     # JWT Metadata
-    jit = db.Column(db.String(16), primary_key = True, unique = True, nullable = True)
+    jti = db.Column(db.String(16), primary_key = True, unique = True, nullable = True)
     sub = db.Column(db.Integer, unique = False, nullable = False)
     iat = db.Column(db.Integer, unique = False, nullable = False)
     exp = db.Column(db.Integer, unique = False, nullable = False)
@@ -12,6 +12,7 @@ class Token(db.Model):
 
     # Rotational Metadata
     revoked = db.Column(db.Boolean, unique = False, nullable = True, default = False)
+    revoked_at = db.Column(db.DateTime, unique = False, nullable = True)
     family_id = db.Column(db.Integer, unique = False, nullable = False, index = True)
 
     def __repr__(self) -> str:
