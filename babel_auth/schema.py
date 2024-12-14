@@ -2,6 +2,7 @@ import jwt
 from datetime import timedelta
 from typing import Optional
 import sqlite3
+from babel_auth.auxillary.errors import Missing_Configuration_Error
 from redis import Redis
 import os
 import base64
@@ -9,6 +10,7 @@ import time
 from datetime import datetime, timedelta
 from typing import TypeAlias
 from functools import wraps
+from jwt.exceptions import PyJWTError, DecodeError, ExpiredSignatureError, InvalidIssuedAtError, InvalidIssuerError
 
 # Aliases
 tokenPair : TypeAlias = tuple[str, str]
@@ -63,10 +65,12 @@ class TokenManager:
 
         self._connString = connString
         self._connectionData = dict()
+        try:
+            self._TokenStore = Redis(os.environ["REDIS_TOKEN_STORE_HOST"], os.environ["REDIS_TOKEN_STORE_PORT"], os.environ["REDIS_TOKEN_STORE_DB"])
+        except:
+            raise Missing_Configuration_Error()
 
-        self._TokenStore = Redis("localhost", port=4321, db = 1)
-
-        # Initialize signing key (HMACSHA256)
+        # Initialize signing key
         self.signingKey = signingKey
 
         # Initialize universal headers, common to all tokens issued in any context
@@ -91,9 +95,10 @@ class TokenManager:
     def decodeToken(self, token : str, checkAdditionals : bool = True, tType : str = "access") -> str:
         '''Decodes an access token, raises error in case of failure'''
         return jwt.decode(jwt = token,
-                            key = self.signingKey,
-                            algorithms = [self.accessHeaders["alg"] if tType == "access" else self.refreshHeaders["alg"]],
-                            leeway = self.leeway)
+                        key = self.signingKey,
+                        algorithms = [self.accessHeaders["alg"] if tType == "access" else self.refreshHeaders["alg"]],
+                        leeway = self.leeway,
+                        issuer="babel-auth-service")
 
     def reissueTokenPair(self, rToken : str) -> tokenPair:
         '''Issue a new token pair from a given refresh token
@@ -167,6 +172,7 @@ class TokenManager:
         '''Revokes a refresh token, without invalidating the family'''
         try:
             decoded = jwt.decode(rToken, options={"verify_signature":verify})["payload"]
+            
             self._TokenStore.hset(f"FID:{decoded['fid']}", decoded["jti"], decoded['exp'])
             self._TokenStore.hexpireat(decoded['fid'], decoded['exp'], decoded["jti"])
 
