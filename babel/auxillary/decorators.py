@@ -1,8 +1,7 @@
-from jwt import decode, PyJWTError, ExpiredSignatureError, DecodeError
-from flask import request, g, abort
+from jwt import decode, PyJWTError, ExpiredSignatureError
+from flask import request, g
 import os
-from babel.auxillary.errors import Unexpected_Request_Format
-from werkzeug.exceptions import Unauthorized
+from werkzeug.exceptions import Unauthorized, BadRequest
 from datetime import timedelta
 import functools
 
@@ -26,11 +25,9 @@ def token_required(endpoint):
             )
             g.decodedToken = decodedToken
         except KeyError as e:
-            raise Unexpected_Request_Format(f"Endpoint /{request.path[1:]} requires an authorization token to give access to resource")
+            raise BadRequest(f"Endpoint /{request.path[1:]} requires an authorization token to give access to resource")
         except ExpiredSignatureError:
             raise Unauthorized("JWT token expired, begin refresh issuance")
-        except DecodeError:
-            raise Unauthorized("Decode Error")
         except PyJWTError as e:
             raise Unauthorized("JWT token invalid")
         
@@ -50,7 +47,9 @@ def enforce_mimetype(mimetype : str):
         @functools.wraps(endpoint)
         def decorated(*args, **kwargs):
             if request.mimetype.split("/")[-1] != mimetype.lower():
-                raise Unexpected_Request_Format("Invalid mimetype forwarded to the endpoint")
+                e = BadRequest(f"Invalid mimetype forwarded to {request.method.upper()} /{request.root_path}")
+                e.__setattr__("_additional_info", f"Expected mimetype: {mimetype}, received {request.mimetype} instead")
+                raise e
             return endpoint(*args, **kwargs)
         return decorated
     return inner_dec
