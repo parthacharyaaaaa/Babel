@@ -18,9 +18,13 @@ def forbidden(e):
     response.headers.update({"issuer" : "babel-auth-flow"})
     return response, 403
 
-@app.errorhandler(Unexpected_Request_Format)
-def unexpected_request_format(e):
-    response = jsonify({"message" : e.message})
+@app.errorhandler(BadRequest)
+@app.errorhandler(KeyError)         #NOTE: Very important to set KeyError.description here, instead of KeyError.message
+def unexpected_request_format(e : Exception):
+    rBody = {"message" : e.description}
+    if hasattr(e, "_additional_info"):
+        rBody.update({"additional information" : e._additional_info})
+    response = jsonify(rBody)
     response.headers.update({"issuer" : "babel-auth-flow"})
     return response, 400
 
@@ -35,7 +39,7 @@ def register():
         password : str = registrationDetails["password"]
 
     except KeyError as k:
-        raise Unexpected_Request_Format(f"POST /{request.path[1:]} Mandatory field missing")
+        raise BadRequest(f"POST /{request.path[1:]} Mandatory field missing")
 
     userExists = db.session.execute(select(User).where(User.username == uname)).first()
     emailExists = db.session.execute(select(User).where(User.email_id == email)).first()
@@ -85,7 +89,7 @@ def validateUser():
         
         return jsonify({"message" : "User Authenticated", "sub" : user.username}), 200
     except KeyError:
-        raise Unexpected_Request_Format()
+        raise BadRequest(f"{request.method} /{request.root_path} expects mandatory fields: identity, password")
 
 @app.route("/delete-account", methods = ["DELETE"])
 @enforce_mimetype("JSON")
@@ -93,7 +97,7 @@ def validateUser():
 def delete_account():
     password : str = request.get_json(force=True)["password"]
     if not password:
-        raise Unexpected_Request_Format(f"POST /{request.path[1:]} Password missing")
+        raise BadRequest(f"POST /{request.path[1:]} Password missing")
     try:
         db.session.execute(update(User)
                            .where(User.email_id == g.decodedToken["sub"])
@@ -116,7 +120,7 @@ def fetch_history():
     try:
         currentPage : int = int(request.args.get("page", 1))
     except ValueError:
-        raise Unexpected_Request_Format(f"POST /{request.path[1:]} Requires an integer to indicate value result")
+        raise BadRequest(f"POST /{request.path[1:]} Requires an integer to indicate value result")
     perPage : int = 10
 
     transcriptionQuery = (select(Transcription_Request.id,
@@ -161,7 +165,7 @@ def fetch_history():
 def transcript_speech():
     audio_file = request.files.get("audio-file", None)
     if audio_file is None:
-        raise Unexpected_Request_Format("Audio File Not Found in Request Object\nAt:POST /transcript-speech")
+        raise BadRequest("Audio File Not Found in Request Object\nAt:POST /transcript-speech")
     
     starting_time = time.time()
     #Add file validation logic here
@@ -237,7 +241,7 @@ def translate_text():
             abort(500)
         return jsonify({"translated-text" : translated_text, "src" : translation_src, "time" : time_taken}), 200
 
-    except Unexpected_Request_Format as e:
+    except BadRequest as e:
         print("NOT JSON")
         return jsonify({"error" : "yeah yeah"}), 400
     except KeyError as e:
