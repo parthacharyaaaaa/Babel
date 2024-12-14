@@ -64,7 +64,7 @@ class TokenManager:
         self._connString = connString
         self._connectionData = dict()
 
-        self._REVOCATION_LIST_CONNECTION = Redis("localhost", port=4321, db = 1)
+        self._TokenStore = Redis("localhost", port=4321, db = 1)
 
         # Initialize signing key (HMACSHA256)
         self.signingKey = signingKey
@@ -137,7 +137,7 @@ class TokenManager:
         else:
             payload["fid"] = familyID
 
-            print(payload["fid"])
+        self._TokenStore.hset(f"FID:{payload['fid']}", payload['jti'], "Active")
 
         self._connectionData["cursor"].execute("INSERT INTO tokens (jit, sub, iat, exp, ipa, revoked, family_id) VALUES (?,?,?,?,?,?,?)",
                              (payload["jti"], "", payload["iat"], payload["exp"], payload.get("ipa"), False, payload["fid"] if authentication else familyID))
@@ -167,12 +167,11 @@ class TokenManager:
         '''Revokes a refresh token, without invalidating the family'''
         try:
             decoded = jwt.decode(rToken, options={"verify_signature":verify})["payload"]
+            self._TokenStore.hset(f"FID:{decoded['fid']}", decoded["jti"], decoded['exp'])
+            self._TokenStore.hexpireat(decoded['fid'], decoded['exp'], decoded["jti"])
 
-            self._connectionData["cursor"].execute("UPDATE tokens SET revoked = True WHERE jti = ?", (decoded["jti"],))
+            self._connectionData["cursor"].execute("UPDATE tokens SET revoked = True WHERE jit = ?", (decoded["jti"],))
             self._connectionData["conn"].commit()
-
-            self._REVOCATION_LIST_CONNECTION.hset(decoded['fid'], decoded["jti"], decoded['exp'])
-            self._REVOCATION_LIST_CONNECTION.hexpireat(decoded['fid'], decoded['exp'], decoded["jti"])
 
             self.decrementActiveTokens()
         except ValueError:
@@ -183,6 +182,8 @@ class TokenManager:
     @singleThreadOnly
     def invalidateFamily(self, fID : str) -> None:
         '''Remove entire token family from revocation list and token store'''
+        self._TokenStore.delete(f"FID:{fID}")
+
         self._connectionData["cursor"].execute("DELETE FROM tokens WHERE family_id = ?", (fID,))
         self._connectionData["conn"].commit()
 
