@@ -2,6 +2,7 @@ import jwt
 from datetime import timedelta
 from typing import Optional
 import sqlite3
+from redis import Redis
 import os
 import base64
 import time
@@ -36,7 +37,7 @@ class TokenManager:
     Note: It is best if only a single instance of this class is active'''
 
     activeRefreshTokens : int = 0 # List of non-revoked refresh tokens
-    _revocationList : list = []
+    # Set up Redis
 
     def __init__(self, signingKey : str,
                  connString : str,
@@ -63,6 +64,8 @@ class TokenManager:
         self._connString = connString
         self._connectionData = dict()
 
+        self._REVOCATION_LIST_CONNECTION = Redis("localhost", port=4321, db = 1)
+
         # Initialize signing key (HMACSHA256)
         self.signingKey = signingKey
 
@@ -85,7 +88,6 @@ class TokenManager:
         # Set leeway for time-related claims
         self.leeway = leeway
 
-
     def decodeToken(self, token : str, checkAdditionals : bool = True, tType : str = "access") -> str:
         '''Decodes an access token, raises error in case of failure'''
         return jwt.decode(jwt = token,
@@ -102,7 +104,7 @@ class TokenManager:
         rToken: JWT encoded refresh token'''
         try:
             decodedRefreshToken = self.decodeToken(rToken, tType = "refresh")
-            self.revokeToken(decodedRefreshToken["jit"])
+            self.revokeToken(decodedRefreshToken["jti"])
         except:
             raise PermissionError("Invalid token") # Will replace permission error with a custom token error later
         
@@ -114,12 +116,17 @@ class TokenManager:
 
     @singleThreadOnly
     def issueRefreshToken(self, sub : str, additionalClaims : Optional[dict] = None, authentication : bool = False, familyID : Optional[str] = None) -> str:
+        if not authentication and familyID in TokenManager._revocationList:
+            e = Exception()
+            e.__setattr__("description", "Token Already Revoked")
+            self.invalidateFamily(familyID)
+        
         payload : dict = {"iat" : time.mktime(datetime.now().timetuple()),
                           "exp" : time.mktime((datetime.now() + self.refreshLifetime).timetuple()),
                           "nbf" : time.mktime((datetime.now() + self.refreshLifetime - self.leeway).timetuple()),
 
                           "sub" : sub,
-                          "jit" : self.generate_unique_identifier()}
+                          "jti" : self.generate_unique_identifier()}
         payload.update(self.uClaims)
         if additionalClaims:
             payload.update(additionalClaims)
@@ -133,7 +140,7 @@ class TokenManager:
             print(payload["fid"])
 
         self._connectionData["cursor"].execute("INSERT INTO tokens (jit, sub, iat, exp, ipa, revoked, family_id) VALUES (?,?,?,?,?,?,?)",
-                             (payload["jit"], "", payload["iat"], payload["exp"], payload.get("ipa"), False, payload["fid"] if authentication else familyID))
+                             (payload["jti"], "", payload["iat"], payload["exp"], payload.get("ipa"), False, payload["fid"] if authentication else familyID))
         self._connectionData["conn"].commit()
         return jwt.encode(payload=payload,
                           key=self.signingKey,
@@ -146,7 +153,7 @@ class TokenManager:
                           "iss" : "babel-auth-service",
                           
                           "sub" : sub,
-                          "jit" : self.generate_unique_identifier()}
+                          "jti" : self.generate_unique_identifier()}
         payload.update(self.uClaims)
         if additionalClaims:
             payload.update(additionalClaims)
@@ -156,14 +163,17 @@ class TokenManager:
                           headers=self.accessHeaders)
 
     @singleThreadOnly
-    def revokeToken(self, rToken : str) -> None:
+    def revokeToken(self, rToken : str, verify : bool = False) -> None:
         '''Revokes a refresh token, without invalidating the family'''
         try:
-            decodedJIT = jwt.decode(rToken, options={"verify_signature":False})["payload"]["jit"] # No need to perform computationally-intensive verification since this method is called internally by TokenManager itself after verification has been done already.
-            self._connectionData["cursor"].execute("UPDATE tokens SET revoked = True WHERE jit = ?", (decodedJIT,))
+            decoded = jwt.decode(rToken, options={"verify_signature":verify})["payload"]
+
+            self._connectionData["cursor"].execute("UPDATE tokens SET revoked = True WHERE jti = ?", (decoded["jti"],))
             self._connectionData["conn"].commit()
 
-            TokenManager._revocationList.append({"jit" : decodedJIT["jit"], "fid" : decodedJIT["fid"]}) # Dict for now, will replace with Redis store later
+            self._REVOCATION_LIST_CONNECTION.hset(decoded['fid'], decoded["jti"], decoded['exp'])
+            self._REVOCATION_LIST_CONNECTION.hexpireat(decoded['fid'], decoded['exp'], decoded["jti"])
+
             self.decrementActiveTokens()
         except ValueError:
             print("Number of active tokens must be non-negative integer")
