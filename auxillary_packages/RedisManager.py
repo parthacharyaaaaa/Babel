@@ -7,10 +7,10 @@ from redis.typing import ResponseT
 class Cache_Manager:
     def __init__(self, host : str, port : int, db : int, startup_mandate : bool = False, error_behavior : Literal["lax", "strict"] = "strict", **kwargs):
         try:
-            self.interface = Redis(host, int(port), int(db), kwargs)
-            if startup_mandate and not self.interface.ping():
+            self._interface = Redis(host, int(port), int(db), kwargs)
+            if startup_mandate and not self._interface.ping():
                 raise ConnectionError("Redis Connection could not be established")
-            elif not (startup_mandate or self.interface.ping()):
+            elif not (startup_mandate or self._interface.ping()):
                 print("\n\n===================WARNING: CACHE_MANAGER INSTANTIATED WITHOUT ACTIVE REDIS SERVER===================\n\n")
 
         except RedisExceptions.RedisError:
@@ -45,34 +45,31 @@ class Cache_Manager:
 
     @safe
     def setex(self, name : str | int, exp : int, value : str | int) -> None:
-        self.interface.execute_command("SETEX", name, exp, value)
+        self._interface.execute_command("SETEX", name, exp, value)
 
     @safe
     def delete(self, *names) -> None:
-        self.interface.execute_command("DELETE", names)
+        self._interface.execute_command("DELETE", names)
 
     @safe
     def get(self, name : str) -> ResponseT | None:
-        result = self.interface.execute_command("GET", name)
-        if result != None:
-            return result.decode("utf-8") if isinstance(result, bytes) else result
-        return None
-    
-    @safe
-    def hget(self, name : str, key : str | int) -> ResponseT | None:
-        result = self.interface.execute_command("HGET", name, key)
+        result = self._interface.execute_command("GET", name)
         if result != None:
             return result.decode("utf-8") if isinstance(result, bytes) else result
         return None
 
     @safe
     def lpush(self, name : str, val : str) -> None:
-        self.interface.lpush(name, val)
+        self._interface.lpush(name, val)
 
     @safe
     def rpop(self, name : str, count : int = 1):
-        self.interface.rpop(name, int(count))
+        self._interface.rpop(name, int(count))
 
     @safe
-    def lindex(self, name : str, index : int):
-        self.interface.lindex(name, int(index))
+    def lindex(self, name : str, index : int) -> ResponseT | None:
+        return self._interface.execute_command("LINDEX", name, index)
+    
+    @safe
+    def llen(self, name : str) -> int:
+        return self._interface.execute_command("LLEN", name)
