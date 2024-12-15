@@ -3,7 +3,7 @@ from datetime import timedelta
 from typing import Optional
 import sqlite3
 from babel_auth.auxillary.errors import Missing_Configuration_Error
-from redis import Redis
+from auxillary_packages.RedisManager import Cache_Manager
 import os
 import base64
 import time
@@ -38,8 +38,7 @@ class TokenManager:
 
     Note: It is best if only a single instance of this class is active'''
 
-    activeRefreshTokens : int = 0 # List of non-revoked refresh tokens
-    # Set up Redis
+    activeRefreshTokens : int = 0
 
     def __init__(self, signingKey : str,
                  connString : str,
@@ -66,7 +65,9 @@ class TokenManager:
         self._connString = connString
         self._connectionData = dict()
         try:
-            self._TokenStore = Redis(os.environ["REDIS_TOKEN_STORE_HOST"], os.environ["REDIS_TOKEN_STORE_PORT"], os.environ["REDIS_TOKEN_STORE_DB"])
+            self._TokenStore = Cache_Manager(os.environ["REDIS_HOST"],
+                             os.environ["REDIS_PORT"],
+                             os.environ["REDIS_DB"])
         except:
             raise Missing_Configuration_Error()
 
@@ -114,18 +115,39 @@ class TokenManager:
             raise PermissionError("Invalid token") # Will replace permission error with a custom token error later
         
         # issue tokens here
-        refreshToken = self.issueRefreshToken(familyID=decodedRefreshToken["fid"])
+        refreshToken = self.issueRefreshToken(decodedRefreshToken["sub"], firstTime=False, jti=decodedRefreshToken["jti"], familyID=decodedRefreshToken["fid"], exp=decodedRefreshToken["exp"])
         accessToken = self.issueAccessToken()
         
         return refreshToken, accessToken
 
     @singleThreadOnly
-    def issueRefreshToken(self, sub : str, additionalClaims : Optional[dict] = None, authentication : bool = False, familyID : Optional[str] = None) -> str:
-        if not authentication and familyID in self._TokenStore:
-            e = Exception()
-            e.__setattr__("description", "Token Already Revoked")
-            self.invalidateFamily(familyID)
+    def issueRefreshToken(self, sub : str, additionalClaims : Optional[dict] = None, firstTime : bool = False, jti : Optional[str] = None, familyID : Optional[str] = None, exp : Optional[int] = None) -> str:
+        '''Issue a refresh token
         
+        params:
+        
+        sub: subject of the JWT
+        
+        additionalClaims: Additional claims to attach to the JWT body
+        
+        firstTime: Whether issuance is assosciated with a new authorization flow or not
+
+        jti: JTI claim of the current refresh token
+
+        familyID: FID claim of the current refresh token
+        '''
+        # Check for replay attack
+        if not firstTime:
+            key = self._TokenStore.lindex(f"FID:{familyID}", 0)
+            if not key:
+                self.invalidateFamily(familyID)
+            key_metadata = key.split(":")
+            if key_metadata[0] != jti or key_metadata[1] != exp:
+                self.invalidateFamily(familyID)
+
+        elif self._TokenStore.get(f"FID{familyID}"):
+            self.invalidateFamily(familyID)
+
         payload : dict = {"iat" : time.mktime(datetime.now().timetuple()),
                           "exp" : time.mktime((datetime.now() + self.refreshLifetime).timetuple()),
                           "nbf" : time.mktime((datetime.now() + self.refreshLifetime - self.leeway).timetuple()),
@@ -136,16 +158,17 @@ class TokenManager:
         if additionalClaims:
             payload.update(additionalClaims)
 
-        if authentication:
+        if firstTime:
             TokenManager.activeRefreshTokens += 1
             payload["fid"] = self.generate_unique_identifier()
         else:
             payload["fid"] = familyID
+            self.revokeTokenWithIDs(payload['jti'], familyID)
 
-        self._TokenStore.hset(f"FID:{payload['fid']}", payload['jti'], "Active")
+        self._TokenStore.lpush(payload['fid'], f"{payload['jti']}:{payload['exp']}")
 
         self._connectionData["cursor"].execute("INSERT INTO tokens (jti, sub, iat, exp, ipa, revoked, family_id) VALUES (?,?,?,?,?,?,?)",
-                             (payload["jti"], "", payload["iat"], payload["exp"], payload.get("ipa"), False, payload["fid"] if authentication else familyID))
+                             (payload["jti"], "", payload["iat"], payload["exp"], payload.get("ipa"), False, payload["fid"] if firstTime else familyID))
         self._connectionData["conn"].commit()
         return jwt.encode(payload=payload,
                           key=self.signingKey,
@@ -172,11 +195,25 @@ class TokenManager:
         '''Revokes a refresh token, without invalidating the family'''
         try:
             decoded = jwt.decode(rToken, options={"verify_signature":verify})["payload"]
-            
-            self._TokenStore.hset(f"FID:{decoded['fid']}", decoded["jti"], decoded['exp'])
-            self._TokenStore.hexpireat(decoded['fid'], decoded['exp'], decoded["jti"])
+
+            self._TokenStore.rpop(f"FID:{decoded['fid']}")
 
             self._connectionData["cursor"].execute("UPDATE tokens SET revoked = True WHERE jti = ?", (decoded["jti"],))
+            self._connectionData["conn"].commit()
+
+            self.decrementActiveTokens()
+        except ValueError:
+            print("Number of active tokens must be non-negative integer")
+        except Exception as e:
+            print("Error in revocation")
+
+    @singleThreadOnly
+    def revokeTokenWithIDs(self, jti : str, fID : str) -> None:
+        '''Revokes a refresh token using JTI and FID claims, without invalidating the family'''
+        try:
+            self._TokenStore.rpop(fID)
+
+            self._connectionData["cursor"].execute("UPDATE tokens SET revoked = True WHERE jti = ?", (jti,))
             self._connectionData["conn"].commit()
 
             self.decrementActiveTokens()
