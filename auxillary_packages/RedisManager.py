@@ -52,24 +52,27 @@ class Cache_Manager:
         self.interface.execute_command("DELETE", names)
 
     @safe
-    def get(self, name) -> ResponseT | None:
+    def get(self, name : str) -> ResponseT | None:
         result = self.interface.execute_command("GET", name)
         if result != None:
             return result.decode("utf-8") if isinstance(result, bytes) else result
         return None
     
     @safe
-    def hset(self, hashName : str, key : str, value : str) -> None:
-        self.interface.execute_command("HSET", hashName, key, key)
+    def hget(self, name : str, key : str | int) -> ResponseT | None:
+        result = self.interface.execute_command("HGET", name, key)
+        if result != None:
+            return result.decode("utf-8") if isinstance(result, bytes) else result
+        return None
 
     @safe
-    def hexpire(self, hashname : str, exp : int, key : str) -> None:
-        print(hashname, exp, key)
-        self.interface.hexpire(hashname, int(exp), key)
-        # self.interface.execute_command("HEXPIRE", hashname, exp, key)
+    def lpush(self, name : str, val : str) -> None:
+        self.interface.lpush(name, val)
 
     @safe
-    def hexpireat(self, hashname : str, exp : int, key : str) -> None:
-        self.interface.hexpireat(hashname, int(exp), key)
-        # self.interface.execute_command("HEXPIREAT", hashname, exp, key)
- 
+    def rpop(self, name : str, count : int = 1):
+        self.interface.rpop(name, int(count))
+
+    @safe
+    def lindex(self, name : str, index : int):
+        self.interface.lindex(name, int(index))
