@@ -1,6 +1,6 @@
 from flask import jsonify, request, abort, g
 import time
-from babel import app, db, bcrypt, REDIS_INTERFACE, ErrorLogger
+from babel import app, db, bcrypt, RedisManager, ErrorLogger
 from babel.models import *
 from babel.config import *
 from babel.auxillary.errors import *
@@ -11,7 +11,10 @@ from sqlalchemy import select, insert, update
 from sqlalchemy.exc import IntegrityError, DataError, StatementError, SQLAlchemyError
 from babel.auxillary.decorators import *
 import requests
-import json
+import json, orjson
+import inspect
+
+LANG_CACHE = None
 
 ### Error Handlers ###
 @app.errorhandler(Unauthorized)
@@ -102,25 +105,22 @@ def validateUser():
 
 @app.route("/users/<string:name>", methods = ["GET"])
 def getUser(name):
-    try:
-        cached_result = REDIS_INTERFACE.execute_command("GET", f"user:{name}")
-        if cached_result:
-            return jsonify(cached_result), 200
-    except:
-        ...
+    cached_result = RedisManager.get(f"user:{name}")
+    if cached_result:
+        return jsonify(cached_result), 200
 
     try:
         user = db.session.execute(select(User).where(User.username == name)).scalar_one_or_none()
     except:
         raise InternalServerError("An error occured in fetching user data")
+
     if not user:
         return jsonify({"message" : "User not found",
                         "additional info" : "Make sure the name is spelt right, and that a user with the given username exists"}), 404
 
     result = user.format_to_dict()
-    REDIS_INTERFACE.execute_command("SETEX", f"user:{name}", 90, json.dumps(result))
+    RedisManager.setex(f"user:{name}", 90, json.dumps(result))
     return jsonify(result), 200
-
 
 @app.route("/delete-account", methods = ["DELETE"])
 @enforce_mimetype("JSON")
@@ -131,7 +131,7 @@ def delete_account():
         raise BadRequest(f"POST /{request.path[1:]} Password missing")
     try:
         db.session.execute(update(User)
-                           .where(User.email_id == g.decodedToken["sub"])
+                           .where(User.username == g.decodedToken["sub"])
                            .values(deleted = True, time_deleted = datetime.now()))
         db.session.commit()
     except (DataError, StatementError):
@@ -140,7 +140,10 @@ def delete_account():
 
     # Logic for sending an API request to auth server to instantly delete all assosciated refresh tokens
     requests.get(url=f"{app.config['AUTH_COMMUNICATION_PROTOCOL']}://{app.config['AUTH_SERVER_ORIGIN']}/purge-family",
-                 headers={"Refresh" : g.decodedToken["fid"]})
+                headers={"Refresh" : g.decodedToken["fid"]})
+    
+    return jsonify({"message" : "Account Deleted Successfully"}), 200
+
 
 @app.route("/fetch-history", methods = ["GET"])
 @token_required
@@ -281,6 +284,13 @@ def translate_text():
 
 @app.route("/fetch-languages", methods = ["GET"])
 def fetch_languages():
+    global LANG_CACHE
+    if LANG_CACHE:
+        return jsonify(LANG_CACHE), 200
+
     available_languages = {"auto" : "auto-detect"}
     available_languages.update(AVAILABLE_LANGUAGES)
-    return jsonify({"lang" : available_languages}), 200
+
+    LANG_CACHE = available_languages
+
+    return jsonify(available_languages), 200
