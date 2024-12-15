@@ -47,7 +47,8 @@ class TokenManager:
                  typ : str = "JWT",
                  uClaims : dict = {"iss" : "babel-auth-service"},
                  uHeaders : dict | None = None,
-                 leeway : timedelta = timedelta(minutes=3)):
+                 leeway : timedelta = timedelta(minutes=3),
+                 max_tokens_per_fid : int = 3):
         '''Initialize the token manager and set universal headers and claims, common to both access and refresh tokens
         
         params:
@@ -67,6 +68,7 @@ class TokenManager:
             self._TokenStore = Cache_Manager(os.environ["REDIS_HOST"],
                              os.environ["REDIS_PORT"],
                              os.environ["REDIS_DB"])
+            self.max_llen = max_tokens_per_fid
         except Exception as e:
             raise Missing_Configuration_Error("Mandatory configurations missing for _TokenStore") from e
 
@@ -222,8 +224,10 @@ class TokenManager:
     def revokeTokenWithIDs(self, jti : str, fID : str) -> None:
         '''Revokes a refresh token using JTI and FID claims, without invalidating the family'''
         try:
-            # if self._TokenStore.llen() != 1:
-            #     self._TokenStore.rpop(fID)
+            llen = self._TokenStore.llen()
+            if llen >= self.max_llen:
+                self._TokenStore.rpop(fID, max(1, llen-self.max_llen-1))
+            
 
             self._connectionData["cursor"].execute("UPDATE tokens SET revoked = True WHERE jti = ?", (jti,))
             self._connectionData["conn"].commit()
