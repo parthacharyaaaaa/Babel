@@ -2,9 +2,10 @@ from flask import Flask
 from flask_bcrypt import Bcrypt
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
-from babel.auxillary.Logger import Logger
+from auxillary_packages.Logger import Logger
+from auxillary_packages.RedisManager import Cache_Manager
 import os
-from babel.config import flask_config, Cache_Manager
+from babel.config import flask_config
 
 app = Flask(__name__)
 app.config.from_object(flask_config)

@@ -3,14 +3,14 @@ import time
 from babel import app, db, bcrypt, RedisManager, ErrorLogger
 from babel.models import *
 from babel.config import *
-from babel.auxillary.errors import *
+from auxillary_packages.errors import *
 from werkzeug.exceptions import Unauthorized, FailedDependency, InternalServerError, HTTPException, Forbidden, NotFound, MethodNotAllowed
 from babel.transciber import getAudioTranscription
 from googletrans import Translator
 from sqlalchemy import select, insert, update
 from sqlalchemy.sql import literal
 from sqlalchemy.exc import IntegrityError, DataError, StatementError, SQLAlchemyError
-from babel.auxillary.decorators import *
+from auxillary_packages.decorators import *
 import requests
 import orjson
 
