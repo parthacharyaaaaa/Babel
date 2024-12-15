@@ -5,7 +5,7 @@ import functools
 from dotenv import load_dotenv
 from babel.auxillary.errors import Missing_Configuration_Error
 from typing import Literal
-from redis import Redis, Resp
+from redis import Redis
 import redis.exceptions as RedisExceptions
 from redis.typing import ResponseT
 
@@ -47,7 +47,7 @@ class AssemblyAI_Config:
         raise ValueError(f"ASSEMBLY-AI API KEY IS INVALID. MUST BE STRINCTLY ALPHA-NUMERIC, NOT {AAI_API_KEY}")
 
 class Cache_Manager:
-    def __init__(self, host : str, port : int, db : int, startup_mandate : bool = True, error_behavior : Literal["lax", "strict"] = "strict", **kwargs):
+    def __init__(self, host : str, port : int, db : int, startup_mandate : bool = False, error_behavior : Literal["lax", "strict"] = "strict", **kwargs):
         try:
             self.interface = Redis(host, port, db, kwargs)
 
@@ -60,35 +60,32 @@ class Cache_Manager:
             raise ConnectionError("Failed to access cache banks")
         
         self.err_behavior = error_behavior
-    
-    def safe(self):
-        def inner_dec(func):
-            @functools.wraps(func)
-            def decorated(*args, **kwargs):
-                try:
-                    return func(*args, **kwargs)
-                except RedisExceptions.ConnectionError as e:
-                    # Logs for connection-related errors
-                    print(f"[Redis Error - ConnectionError] Failed to connect to Redis server. Details: {str(e)}")
-                except RedisExceptions.TimeoutError as e:
-                    # Logs for timeout errors
-                    print(f"[Redis Error - TimeoutError] Redis operation timed out. Details: {str(e)}")
-                except RedisExceptions.RedisError as e:
-                    # Logs for general Redis errors
-                    print(f"[Redis Error - RedisError] An unexpected Redis error occurred. Details: {str(e)}")
-                except Exception as e:
-                    # Fallback for unexpected issues
-                    print(f"[Redis Error - Unknown] An unknown error occurred. Details: {str(e)}")
+    def safe(func):
+        @functools.wraps(func)
+        def decorated(*args, **kwargs):
+            try:
+                return func(*args, **kwargs)
+            except RedisExceptions.ConnectionError as e:
+                # Logs for connection-related errors
+                print(f"[Redis Error - ConnectionError] Failed to connect to Redis server. Details: {str(e)}")
+            except RedisExceptions.TimeoutError as e:
+                # Logs for timeout errors
+                print(f"[Redis Error - TimeoutError] Redis operation timed out. Details: {str(e)}")
+            except RedisExceptions.RedisError as e:
+                # Logs for general Redis errors
+                print(f"[Redis Error - RedisError] An unexpected Redis error occurred. Details: {str(e)}")
+            except Exception as e:
+                # Fallback for unexpected issues
+                print(f"[Redis Error - Unknown] An unknown error occurred. Details: {str(e)}")
 
-                if self.err_behavior == "strict":
-                    e = RedisExceptions.RedisError()
-                    e.__setattr__("description", "Raising error, error_policy = strict")
-                    raise e
+            if args[0].err_behavior == "strict":
+                e = RedisExceptions.RedisError()
+                e.__setattr__("description", "Raising error, error_policy = strict")
+                raise e
 
-                return None 
-            return decorated
-        return inner_dec
-    
+            return None 
+        return decorated
+
     @safe
     def setex(self, name : str | int, exp : int, value : str | int) -> None:
         self.interface.execute_command("SETEX", name, exp, value)

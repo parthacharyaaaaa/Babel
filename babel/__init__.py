@@ -3,9 +3,8 @@ from flask_bcrypt import Bcrypt
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from babel.auxillary.Logger import Logger
-import redis
-
-from babel.config import flask_config
+import os
+from babel.config import flask_config, Cache_Manager
 
 app = Flask(__name__)
 app.config.from_object(flask_config)
@@ -14,7 +13,10 @@ db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 bcrypt = Bcrypt(app)
 
-REDIS_INTERFACE = redis.Redis(host="localhost", port=1234, db = 0, health_check_interval = 60)
+RedisManager = Cache_Manager(os.environ["REDIS_HOST"],
+                            os.environ["REDIS_PORT"],
+                            os.environ["REDIS_DB"])
+
 ErrorLogger = Logger(app.config["ERROR_LOG_FILE"])
 
 from babel import routes
