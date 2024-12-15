@@ -4,10 +4,11 @@ from babel import app, db, bcrypt, RedisManager, ErrorLogger
 from babel.models import *
 from babel.config import *
 from babel.auxillary.errors import *
-from werkzeug.exceptions import Unauthorized, FailedDependency, InternalServerError
+from werkzeug.exceptions import Unauthorized, FailedDependency, InternalServerError, HTTPException, Forbidden, NotFound, MethodNotAllowed
 from babel.transciber import getAudioTranscription
 from googletrans import Translator
 from sqlalchemy import select, insert, update
+from sqlalchemy.sql import literal
 from sqlalchemy.exc import IntegrityError, DataError, StatementError, SQLAlchemyError
 from babel.auxillary.decorators import *
 import requests
@@ -16,23 +17,42 @@ import orjson
 LANG_CACHE = None
 
 ### Error Handlers ###
+@app.errorhandler(MethodNotAllowed)
+def methodNotAllowed(e : MethodNotAllowed):
+    response = {"message" : f"{getattr(e, 'description', 'Method Not Allowed')}"}
+    if hasattr(e, "HTTP_type") and hasattr(e, "expected_HTTP_type"):
+        response.update({"additional" : f"Expected {e.expected_HTTP_type}, got {e.HTTP_type}"})
+    return jsonify(response), 405
+
+@app.errorhandler(NotFound)
+def resource_not_found(e : NotFound):
+    return jsonify({"message": "Requested resource could not be found."}), 404
+
+@app.errorhandler(Forbidden)
 @app.errorhandler(Unauthorized)
-def forbidden(e):
-    response = jsonify({"message" : e.description})
+def forbidden(e : Forbidden | Unauthorized):
+    response = jsonify({"message" : getattr(e, "description", "Resource Access Denied")})
     response.headers.update({"issuer" : "babel-auth-flow"})
     return response, 403
 
 @app.errorhandler(BadRequest)
 @app.errorhandler(KeyError)         #NOTE: Very important to set KeyError.description here, instead of KeyError.message
-def unexpected_request_format(e : Exception):
-    rBody = {"message" : e.description}
+def unexpected_request_format(e : BadRequest | KeyError):
+    rBody = {"message" : getattr(e, "description", "Bad Request! Ensure proper request format")}
     if hasattr(e, "_additional_info"):
         rBody.update({"additional information" : e._additional_info})
     response = jsonify(rBody)
-    response.headers.update({"issuer" : "babel-auth-flow"})
     return response, 400
 
-# @app.errorhandler(Exception)
+@app.errorhandler(DISCRETE_DB_ERROR)
+def discrete_db_err(e : DISCRETE_DB_ERROR):
+    ErrorLogger.addEntryToQueue(e)
+    r = jsonify({"message" : getattr(e, "description", "DB_ERR_500")})
+    r.headers.update({"Issuer" : "Babel-Backend-Services"})
+    return r, 500
+
+@app.errorhandler(Exception)
+@app.errorhandler(HTTPException)
 @app.errorhandler(InternalServerError)
 def internalServerError(e : Exception):
     ErrorLogger.addEntryToQueue(e)
@@ -143,7 +163,6 @@ def delete_account():
     
     return jsonify({"message" : "Account Deleted Successfully"}), 200
 
-
 @app.route("/fetch-history", methods = ["GET"])
 @token_required
 def fetch_history():
@@ -154,25 +173,29 @@ def fetch_history():
         currentPage : int = int(request.args.get("page", 1))
     except ValueError:
         raise BadRequest(f"POST /{request.path[1:]} Requires an integer to indicate value result")
+    
+    cached_result = RedisManager.get(f"u_hist:{username}:{viewPreference}")
+    if cached_result:
+        return jsonify({"result" : orjson.loads(cached_result)})
+
     perPage : int = 10
 
-    transcriptionQuery = (select(Transcription_Request.id,
+    transcriptionQuery =(select(Transcription_Request.id,
                                 Transcription_Request.time_requested.label("time_requested"),
-                                Transcription_Request.transcipted_text.label("content")
-                                ).where(Transcription_Request.requestor == username)
-                                .order_by(Transcription_Request.time_requested.desc())
-                                .limit(perPage)
-                                .offset((currentPage-1) * perPage))
-    
+                                Transcription_Request.transcipted_text.label("content"),
+                                Transcription_Request.language.label("lang"),
+                                literal(None).label("src"),
+                                literal(None).label("dst"),
+                                ).where(Transcription_Request.requested_by == username))
+
     translationQuery = (select(Translation_Request.id,
                               Translation_Request.time_requested.label("time_requested"),
+                              Translation_Request.translated_text.label("content"),
+                              literal(None).label("lang"),
                               Translation_Request.language_from.label("src"),
                               Translation_Request.language_to.label("dst"),
-                              ).where(Translation_Request.requested_by == username)
-                              .order_by(Translation_Request.time_requested.desc())
-                              .limit(perPage)
-                              .offset((currentPage-1) * perPage))
-    
+                              ).where(Translation_Request.requested_by == username))
+
     combinedQuery = (transcriptionQuery.union_all(translationQuery)
                     .order_by(db.desc("time_requested"))
                     .limit(perPage)
@@ -180,16 +203,23 @@ def fetch_history():
     
     try:
         if viewPreference == "transcription":
-            qResult = db.session.execute(transcriptionQuery)
+            qResult = db.session.execute(transcriptionQuery.order_by(Transcription_Request.time_requested.desc()).limit(perPage).offset((currentPage -1) * perPage))
         elif viewPreference == "translation":
-            qResult = db.session.execute(translationQuery)
+            qResult = db.session.execute(translationQuery.order_by(Transcription_Request.time_requested.desc()).limit(perPage).offset((currentPage -1) * perPage))
         else:
             qResult = db.session.execute(combinedQuery)
-    except (IntegrityError, DataError):
-        abort(500) #NOTE: Add custom DB error wrapper for app.errorhandler()
+    except (IntegrityError, DataError) as e:
+        e = SQLAlchemyError
+        e.__setattr__("description", "Seems to be an error with our database service. Please try again later, or contact support")
+        e.__setattr__("_additional_info", f"{e.__class__}, {e.with_traceback()}. Time: {datetime.now()}")
+        raise e
+    except SQLAlchemyError as e:
+
     
     pyReadableResult : list = [row._asdict() for row in qResult]
 
+    if currentPage <= 3:
+        RedisManager.setex(f"u_hist:{username}:{viewPreference}", 120, orjson.dumps(pyReadableResult))
     return jsonify({"result" : pyReadableResult}), 200
 
 @app.route("/transcript-speech", methods = ["POST"])
