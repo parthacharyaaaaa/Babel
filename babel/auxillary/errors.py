@@ -1,5 +1,3 @@
-from sqlalchemy.exc import SQLAlchemyError
-
 class Missing_Configuration_Error(Exception):
     def __init__(self, description : str = "Failure in loading configurations") -> None:
         self.description = description
@@ -10,7 +8,7 @@ class API_TIMEOUT_ERROR(Exception):
         self.description = description.format(endpoint)
         super().__init__(self, self.description)
 
-class DISCRETE_DB_ERROR(SQLAlchemyError):
+class DISCRETE_DB_ERROR(Exception):
     '''Only to be used to abstract away the details of a SQL error'''
     def __init__(self, description : str = "Database Service Error", *arg, **kw):
         self.description = description

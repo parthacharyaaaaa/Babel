@@ -213,8 +213,8 @@ def fetch_history():
         e.__setattr__("description", "Seems to be an error with our database service. Please try again later, or contact support")
         e.__setattr__("_additional_info", f"{e.__class__}, {e.with_traceback()}. Time: {datetime.now()}")
         raise e
-    except SQLAlchemyError as e:
-
+    except Exception as e:
+        raise DISCRETE_DB_ERROR()
     
     pyReadableResult : list = [row._asdict() for row in qResult]
 
