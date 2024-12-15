@@ -1,11 +1,10 @@
 import jwt
-from datetime import timedelta
 from typing import Optional
 import sqlite3
 from babel_auth.auxillary.errors import Missing_Configuration_Error
 from auxillary_packages.RedisManager import Cache_Manager
 import os
-import base64
+import uuid
 import time
 from datetime import datetime, timedelta
 from typing import TypeAlias
@@ -68,8 +67,8 @@ class TokenManager:
             self._TokenStore = Cache_Manager(os.environ["REDIS_HOST"],
                              os.environ["REDIS_PORT"],
                              os.environ["REDIS_DB"])
-        except:
-            raise Missing_Configuration_Error()
+        except Exception as e:
+            raise Missing_Configuration_Error("Mandatory configurations missing for _TokenStore") from e
 
         # Initialize signing key
         self.signingKey = signingKey
@@ -115,13 +114,22 @@ class TokenManager:
             raise PermissionError("Invalid token") # Will replace permission error with a custom token error later
         
         # issue tokens here
-        refreshToken = self.issueRefreshToken(decodedRefreshToken["sub"], firstTime=False, jti=decodedRefreshToken["jti"], familyID=decodedRefreshToken["fid"], exp=decodedRefreshToken["exp"])
-        accessToken = self.issueAccessToken()
+        refreshToken = self.issueRefreshToken(decodedRefreshToken["sub"],
+                                              firstTime=False,
+                                              jti=decodedRefreshToken["jti"],
+                                              familyID=decodedRefreshToken["fid"],
+                                              exp=decodedRefreshToken["exp"])
+        accessToken = self.issueAccessToken(additionalClaims={"fid" : decodedRefreshToken["fid"]})
         
         return refreshToken, accessToken
 
     @singleThreadOnly
-    def issueRefreshToken(self, sub : str, additionalClaims : Optional[dict] = None, firstTime : bool = False, jti : Optional[str] = None, familyID : Optional[str] = None, exp : Optional[int] = None) -> str:
+    def issueRefreshToken(self, sub : str,
+                          additionalClaims : Optional[dict] = None,
+                          firstTime : bool = False,
+                          jti : Optional[str] = None,
+                          familyID : Optional[str] = None,
+                          exp : Optional[int] = None) -> str:
         '''Issue a refresh token
         
         params:
@@ -175,7 +183,8 @@ class TokenManager:
                           algorithm=self.refreshHeaders["alg"],
                           headers=self.refreshHeaders)
 
-    def issueAccessToken(self, sub : str, additionalClaims : Optional[dict] = None) -> str:
+    def issueAccessToken(self, sub : str, 
+                         additionalClaims : Optional[dict] = None) -> str:
         payload : dict = {"iat" : time.mktime(datetime.now().timetuple()),
                           "exp" : time.mktime((datetime.now() + self.accessLifetime).timetuple()),
                           "iss" : "babel-auth-service",
@@ -202,16 +211,19 @@ class TokenManager:
             self._connectionData["conn"].commit()
 
             self.decrementActiveTokens()
-        except ValueError:
-            print("Number of active tokens must be non-negative integer")
-        except Exception as e:
-            print("Error in revocation")
+        except ValueError as e:
+            e.__setattr__("description", f"Token Revocation Failed: {e.with_traceback()}")
+            raise e
+        except sqlite3.Error as db_error:
+            db_error.__setattr__("description", f"Database operation failed: {db_error}")
+            raise db_error
 
     @singleThreadOnly
     def revokeTokenWithIDs(self, jti : str, fID : str) -> None:
         '''Revokes a refresh token using JTI and FID claims, without invalidating the family'''
         try:
-            self._TokenStore.rpop(fID)
+            # if self._TokenStore.llen() != 1:
+            #     self._TokenStore.rpop(fID)
 
             self._connectionData["cursor"].execute("UPDATE tokens SET revoked = True WHERE jti = ?", (jti,))
             self._connectionData["conn"].commit()
@@ -238,4 +250,4 @@ class TokenManager:
     
     @staticmethod
     def generate_unique_identifier():
-        return base64.urlsafe_b64encode(os.urandom(16)).decode('utf-8')
+        return uuid.uuid4().hex
