@@ -11,8 +11,7 @@ from sqlalchemy import select, insert, update
 from sqlalchemy.exc import IntegrityError, DataError, StatementError, SQLAlchemyError
 from babel.auxillary.decorators import *
 import requests
-import json, orjson
-import inspect
+import orjson
 
 LANG_CACHE = None
 
@@ -107,7 +106,7 @@ def validateUser():
 def getUser(name):
     cached_result = RedisManager.get(f"user:{name}")
     if cached_result:
-        return jsonify(cached_result), 200
+        return jsonify(orjson.loads(cached_result)), 200
 
     try:
         user = db.session.execute(select(User).where(User.username == name)).scalar_one_or_none()
@@ -119,7 +118,7 @@ def getUser(name):
                         "additional info" : "Make sure the name is spelt right, and that a user with the given username exists"}), 404
 
     result = user.format_to_dict()
-    RedisManager.setex(f"user:{name}", 90, json.dumps(result))
+    RedisManager.setex(f"user:{name}", 90, orjson.dumps(result))
     return jsonify(result), 200
 
 @app.route("/delete-account", methods = ["DELETE"])
