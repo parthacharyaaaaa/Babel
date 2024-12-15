@@ -205,7 +205,7 @@ def fetch_history():
         if viewPreference == "transcription":
             qResult = db.session.execute(transcriptionQuery.order_by(Transcription_Request.time_requested.desc()).limit(perPage).offset((currentPage -1) * perPage))
         elif viewPreference == "translation":
-            qResult = db.session.execute(translationQuery.order_by(Transcription_Request.time_requested.desc()).limit(perPage).offset((currentPage -1) * perPage))
+            qResult = db.session.execute(translationQuery.order_by(Translation_Request.time_requested.desc()).limit(perPage).offset((currentPage -1) * perPage))
         else:
             qResult = db.session.execute(combinedQuery)
     except (IntegrityError, DataError) as e:
