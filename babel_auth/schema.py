@@ -121,7 +121,7 @@ class TokenManager:
 
     @singleThreadOnly
     def issueRefreshToken(self, sub : str, additionalClaims : Optional[dict] = None, authentication : bool = False, familyID : Optional[str] = None) -> str:
-        if not authentication and familyID in TokenManager._revocationList:
+        if not authentication and familyID in self._TokenStore:
             e = Exception()
             e.__setattr__("description", "Token Already Revoked")
             self.invalidateFamily(familyID)
@@ -144,7 +144,7 @@ class TokenManager:
 
         self._TokenStore.hset(f"FID:{payload['fid']}", payload['jti'], "Active")
 
-        self._connectionData["cursor"].execute("INSERT INTO tokens (jit, sub, iat, exp, ipa, revoked, family_id) VALUES (?,?,?,?,?,?,?)",
+        self._connectionData["cursor"].execute("INSERT INTO tokens (jti, sub, iat, exp, ipa, revoked, family_id) VALUES (?,?,?,?,?,?,?)",
                              (payload["jti"], "", payload["iat"], payload["exp"], payload.get("ipa"), False, payload["fid"] if authentication else familyID))
         self._connectionData["conn"].commit()
         return jwt.encode(payload=payload,
@@ -176,7 +176,7 @@ class TokenManager:
             self._TokenStore.hset(f"FID:{decoded['fid']}", decoded["jti"], decoded['exp'])
             self._TokenStore.hexpireat(decoded['fid'], decoded['exp'], decoded["jti"])
 
-            self._connectionData["cursor"].execute("UPDATE tokens SET revoked = True WHERE jit = ?", (decoded["jti"],))
+            self._connectionData["cursor"].execute("UPDATE tokens SET revoked = True WHERE jti = ?", (decoded["jti"],))
             self._connectionData["conn"].commit()
 
             self.decrementActiveTokens()
