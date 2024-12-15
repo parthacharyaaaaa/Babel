@@ -49,14 +49,13 @@ class AssemblyAI_Config:
 class Cache_Manager:
     def __init__(self, host : str, port : int, db : int, startup_mandate : bool = False, error_behavior : Literal["lax", "strict"] = "strict", **kwargs):
         try:
-            self.interface = Redis(host, port, db, kwargs)
-
+            self.interface = Redis(host, int(port), int(db), kwargs)
             if startup_mandate and not self.interface.ping():
                 raise ConnectionError("Redis Connection could not be established")
-            elif not (startup_mandate and self.interface.ping()):
+            elif not (startup_mandate or self.interface.ping()):
                 print("\n\n===================WARNING: CACHE_MANAGER INSTANTIATED WITHOUT ACTIVE REDIS SERVER===================\n\n")
 
-        except RedisExceptions.RedisError as e:
+        except RedisExceptions.RedisError:
             raise ConnectionError("Failed to access cache banks")
         
         self.err_behavior = error_behavior
