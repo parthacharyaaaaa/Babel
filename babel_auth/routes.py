@@ -22,9 +22,9 @@ def badRequest(e):
 
 ### Endpoints ###
 
-@auth.route("/authenticate", methods = ["POST"])
+@auth.route("/login", methods = ["POST"])
 @enforce_mimetype("json")
-def authenticate():
+def login():
     if not request.is_json:
         raise BadRequest(f"POST /{request.root_path} accepts only JSON requests")
     authentication_data = request.get_json(force=True, silent=False)
@@ -42,7 +42,7 @@ def authenticate():
     subject = valid.json()["sub"]
     aToken = tokenManager.issueAccessToken(sub = subject)
     rToken = tokenManager.issueRefreshToken(sub = subject,
-                                            familyID = tokenManager.generate_unique_identifier())
+                                            firstTime=True)
 
     response = jsonify({
         "access" : aToken,
@@ -82,7 +82,7 @@ def register():
     subject = valid.json()["sub"]
     aToken = tokenManager.issueAccessToken(sub = subject)
     rToken = tokenManager.issueRefreshToken(sub = subject,
-                                            familyID = tokenManager.generate_unique_identifier())
+                                            firstTime=True)
 
     response = jsonify({
         "access" : aToken,
@@ -100,16 +100,12 @@ def deleteAccount():
 
 @auth.route("/reissue", methods = ["GET"])
 def reissue():
-    authMetadata = request.headers.get("Authorization", request.headers.get("authorization", None))
+    refreshToken = request.headers.get("Refresh", request.headers.get("refresh", None))
 
-    if not authMetadata:
+    if not refreshToken:
         e = KeyError()
         e.__setattr__("description", "Refresh Token missing from request, reissuance denied")
         raise e
-    
-    refreshToken = tokenManager.decodeToken(token=authMetadata,
-                                            checkAdditionals=False,
-                                            tType="refresh")
     
     nAccessToken, nRefreshToken = tokenManager.reissueTokenPair(refreshToken)
     return jsonify({"access" : nAccessToken, "refresh" : nRefreshToken}), 201
