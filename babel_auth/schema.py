@@ -209,28 +209,6 @@ class TokenManager:
                           headers=self.accessHeaders)
 
     @singleThreadOnly
-    def revokeToken(self, rToken : str, verify : bool = False) -> None:
-        '''Revokes a refresh token, without invalidating the family'''
-        try:
-            decoded = jwt.decode(rToken, options={"verify_signature":verify})["payload"]
-            llen = self._TokenStore.llen(f"FID:{decoded['fid']}")
-            if llen >= self.max_llen:
-                self._TokenStore.rpop(f"FID:{decoded['fid']}", max(1, llen-self.max_llen-1))
-
-            self._connectionData["cursor"].execute("UPDATE tokens SET revoked = True WHERE jti = ?", (decoded["jti"],))
-            self._connectionData["conn"].commit()
-
-            self.decrementActiveTokens()
-        except ValueError as e:
-            e.__setattr__("description", f"Token Revocation Failed: {e.with_traceback()}")
-            raise e
-        except sqlite3.Error as db_error:
-            db_error.__setattr__("description", f"Database operation failed: {db_error}")
-            raise db_error
-        except Exception as e:
-            raise InternalServerError("Failed to perform operation on token store")
-
-    @singleThreadOnly
     def revokeTokenWithIDs(self, jti : str, fID : str) -> None:
         '''Revokes a refresh token using JTI and FID claims, without invalidating the family'''
         try:
