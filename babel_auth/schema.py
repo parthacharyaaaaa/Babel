@@ -213,11 +213,10 @@ class TokenManager:
         '''Revokes a refresh token, without invalidating the family'''
         try:
             decoded = jwt.decode(rToken, options={"verify_signature":verify})["payload"]
-            llen = self._TokenStore.llen()
-            if llen >= self.max_llen:
-                self._TokenStore.rpop(f"FID:{decoded['fid']}", max(1, llen-self.max_llen-1))
-
-            self._TokenStore.rpop(f"FID:{decoded['fid']}")
+            with self._TokenStore.create_pipeline() as pipe:
+                llen = pipe.llen(f"FID:{decoded['fid']}")
+                if llen >= self.max_llen:
+                    pipe.rpop(f"FID:{decoded['fid']}", max(1, llen-self.max_llen-1))
 
             self._connectionData["cursor"].execute("UPDATE tokens SET revoked = True WHERE jti = ?", (decoded["jti"],))
             self._connectionData["conn"].commit()
@@ -236,11 +235,11 @@ class TokenManager:
     def revokeTokenWithIDs(self, jti : str, fID : str) -> None:
         '''Revokes a refresh token using JTI and FID claims, without invalidating the family'''
         try:
-            llen = self._TokenStore.llen()
-            if llen >= self.max_llen:
-                self._TokenStore.rpop(f"FID:{fID}", max(1, llen-self.max_llen-1))
-            
-
+            with self._TokenStore.create_pipeline() as pipe:
+                llen = pipe.llen(f"FID:{fID}")
+                if llen >= self.max_llen:
+                    pipe.rpop(f"FID:{fID}", max(1, llen-self.max_llen-1))
+                
             self._connectionData["cursor"].execute("UPDATE tokens SET revoked = True WHERE jti = ?", (jti,))
             self._connectionData["conn"].commit()
 
