@@ -213,6 +213,9 @@ class TokenManager:
         '''Revokes a refresh token, without invalidating the family'''
         try:
             decoded = jwt.decode(rToken, options={"verify_signature":verify})["payload"]
+            llen = self._TokenStore.llen()
+            if llen >= self.max_llen:
+                self._TokenStore.rpop(f"FID:{decoded['fid']}", max(1, llen-self.max_llen-1))
 
             self._TokenStore.rpop(f"FID:{decoded['fid']}")
 
