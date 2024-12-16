@@ -1,7 +1,7 @@
 import jwt
 from typing import Optional
 import sqlite3
-from babel_auth.auxillary.errors import Missing_Configuration_Error
+from auxillary_packages.errors import Missing_Configuration_Error
 from auxillary_packages.RedisManager import Cache_Manager
 import os
 import uuid
