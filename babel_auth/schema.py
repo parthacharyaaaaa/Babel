@@ -1,8 +1,9 @@
 import jwt
 from typing import Optional, Literal
 import sqlite3
-from auxillary_packages.errors import Missing_Configuration_Error
+from auxillary_packages.errors import Missing_Configuration_Error, TOKEN_STORE_INTEGRITY_ERROR
 from auxillary_packages.RedisManager import Cache_Manager
+from werkzeug.exceptions import InternalServerError
 import os
 import uuid
 import time
@@ -96,12 +97,17 @@ class TokenManager:
 
     def decodeToken(self, token : str, checkAdditionals : bool = True, tType : Literal["access", "refresh"] = "access", **kwargs) -> str:
         '''Decodes an access token, raises error in case of failure'''
-        return jwt.decode(jwt = token,
-                        key = self.signingKey,
-                        algorithms = [self.accessHeaders["alg"] if tType == "access" else self.refreshHeaders["alg"]],
-                        leeway = self.leeway,
-                        issuer="babel-auth-service",
-                        options=kwargs.get('options'))
+        try:
+            return jwt.decode(jwt = token,
+                            key = self.signingKey,
+                            algorithms = [self.accessHeaders["alg"] if tType == "access" else self.refreshHeaders["alg"]],
+                            leeway = self.leeway,
+                            issuer="babel-auth-service",
+                            options=kwargs.get('options'))
+        except (JWTexc.ImmatureSignatureError, JWTexc.InvalidIssuedAtError, JWTexc.InvalidIssuerError) as e:
+            if tType == "refresh":
+                self.invalidateFamily(jwt.decode(token, options={"verify_signature":False})["fid"])
+            raise TOKEN_STORE_INTEGRITY_ERROR()
 
     def reissueTokenPair(self, rToken : str) -> tokenPair:
         '''Issue a new token pair from a given refresh token
@@ -110,15 +116,10 @@ class TokenManager:
         
         aToken: JWT encoded access token\n
         rToken: JWT encoded refresh token'''
-        try:
-            decodedRefreshToken = self.decodeToken(rToken, tType = "refresh")
-            self.revokeToken(decodedRefreshToken["jti"])
-        except JWTexc.ImmatureSignatureError as e:
-            self.invalidateFamily(jwt.decode(rToken, options={"verify_signature":False})["fid"]) 
-            raise PermissionError()
-        except Exception as e:
-            print("Failed to decode token")
-            raise e
+
+        decodedRefreshToken = self.decodeToken(rToken, tType = "refresh")
+        self.revokeToken(decodedRefreshToken["jti"])
+
         # issue tokens here
         refreshToken = self.issueRefreshToken(decodedRefreshToken["sub"],
                                               firstTime=False,
@@ -155,12 +156,15 @@ class TokenManager:
             key = self._TokenStore.lindex(f"FID:{familyID}", 0)
             if not key:
                 self.invalidateFamily(familyID)
+                raise TOKEN_STORE_INTEGRITY_ERROR(f"Token family {familyID} is invalid or empty")
             key_metadata = key.split(":")
             if key_metadata[0] != jti or key_metadata[1] != exp:
                 self.invalidateFamily(familyID)
+                raise TOKEN_STORE_INTEGRITY_ERROR(f"Replay attack detected or token metadata mismatch for family {familyID}")
 
         elif self._TokenStore.get(f"FID{familyID}"):
             self.invalidateFamily(familyID)
+            raise TOKEN_STORE_INTEGRITY_ERROR(f"Token family {familyID} already exists, cannot issue a new token with the same family")
 
         payload : dict = {"iat" : time.mktime(datetime.now().timetuple()),
                           "exp" : time.mktime((datetime.now() + self.refreshLifetime).timetuple()),
@@ -222,6 +226,8 @@ class TokenManager:
         except sqlite3.Error as db_error:
             db_error.__setattr__("description", f"Database operation failed: {db_error}")
             raise db_error
+        except Exception as e:
+            raise InternalServerError("Failed to perform operation on token store")
 
     @singleThreadOnly
     def revokeTokenWithIDs(self, jti : str, fID : str) -> None:
@@ -238,16 +244,25 @@ class TokenManager:
             self.decrementActiveTokens()
         except ValueError:
             print("Number of active tokens must be non-negative integer")
+        except sqlite3.Error as db_error:
+            db_error.__setattr__("description", f"Database operation failed: {db_error}")
+            raise db_error
         except Exception as e:
-            print("Error in revocation")
+            raise InternalServerError("Failed to perform operation on token store")
 
     @singleThreadOnly
     def invalidateFamily(self, fID : str) -> None:
         '''Remove entire token family from revocation list and token store'''
-        self._TokenStore.delete(f"FID:{fID}")
+        try:
+            self._TokenStore.delete(f"FID:{fID}")
 
-        self._connectionData["cursor"].execute("DELETE FROM tokens WHERE family_id = ?", (fID,))
-        self._connectionData["conn"].commit()
+            self._connectionData["cursor"].execute("DELETE FROM tokens WHERE family_id = ?", (fID,))
+            self._connectionData["conn"].commit()
+        except sqlite3.Error as db_error:
+            db_error.__setattr__("description", f"Database operation failed: {db_error}")
+            raise db_error
+        except Exception as e:
+            raise InternalServerError("Failed to perform operation on token store")
 
     @staticmethod
     def decrementActiveTokens():
