@@ -1,7 +1,7 @@
 from datetime import timedelta
 import os
 from dotenv import load_dotenv
-from babel_auth.auxillary.errors import Missing_Configuration_Error
+from auxillary_packages.errors import Missing_Configuration_Error
 
 CWD = os.path.dirname(__file__)
 load_dotenv(os.path.join(CWD, ".env"), override=True)
