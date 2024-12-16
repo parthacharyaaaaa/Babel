@@ -126,7 +126,8 @@ class TokenManager:
                                               jti=decodedRefreshToken["jti"],
                                               familyID=decodedRefreshToken["fid"],
                                               exp=decodedRefreshToken["exp"])
-        accessToken = self.issueAccessToken(additionalClaims={"fid" : decodedRefreshToken["fid"]})
+        accessToken = self.issueAccessToken(decodedRefreshToken['sub'],
+                                            additionalClaims={"fid" : decodedRefreshToken["fid"]})
         
         return refreshToken, accessToken
 
@@ -212,7 +213,6 @@ class TokenManager:
     def revokeTokenWithIDs(self, jti : str, fID : str) -> None:
         '''Revokes a refresh token using JTI and FID claims, without invalidating the family'''
         try:
-            print("Before llen: ", TokenManager.activeRefreshTokens)
             llen = self._TokenStore.llen(f"FID:{fID}")
             if llen >= self.max_llen:
                 self._TokenStore.rpop(f"FID:{fID}", max(1, llen-self.max_llen-1))
@@ -221,9 +221,7 @@ class TokenManager:
             self._connectionData["conn"].commit()
 
             self.decrementActiveTokens()
-            print("After decrement success: ", TokenManager.activeRefreshTokens)
         except ValueError as e:
-            print(e)
             print("Number of active tokens must be non-negative integer")
         except sqlite3.Error as db_error:
             db_error.__setattr__("description", f"Database operation failed: {db_error}")
