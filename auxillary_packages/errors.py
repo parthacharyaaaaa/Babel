@@ -13,3 +13,8 @@ class DISCRETE_DB_ERROR(Exception):
     def __init__(self, description : str = "Database Service Error", *arg, **kw):
         self.description = description
         super().__init__(*arg, **kw)
+
+class TOKEN_STORE_INTEGRITY_ERROR(Exception):
+    def __init__(self, description : str = "Invalid token detected", *args, **kwargs):
+        self.description = description
+        super().__init__(*args, **kwargs)
