@@ -96,7 +96,7 @@ class TokenManager:
         self.leeway = leeway
 
     def decodeToken(self, token : str, checkAdditionals : bool = True, tType : Literal["access", "refresh"] = "access", **kwargs) -> str:
-        '''Decodes an access token, raises error in case of failure'''
+        '''Decodes token, raises error in case of failure'''
         try:
             return jwt.decode(jwt = token,
                             key = self.signingKey,
@@ -107,7 +107,7 @@ class TokenManager:
         except (JWTexc.ImmatureSignatureError, JWTexc.InvalidIssuedAtError, JWTexc.InvalidIssuerError) as e:
             if tType == "refresh":
                 self.invalidateFamily(jwt.decode(token, options={"verify_signature":False})["fid"])
-            raise TOKEN_STORE_INTEGRITY_ERROR()
+            raise TOKEN_STORE_INTEGRITY_ERROR("PP")
 
     def reissueTokenPair(self, rToken : str) -> tokenPair:
         '''Issue a new token pair from a given refresh token
@@ -118,7 +118,7 @@ class TokenManager:
         rToken: JWT encoded refresh token'''
 
         decodedRefreshToken = self.decodeToken(rToken, tType = "refresh")
-        self.revokeToken(decodedRefreshToken["jti"])
+        self.revokeTokenWithIDs(decodedRefreshToken["jti"], decodedRefreshToken['fid'])
 
         # issue tokens here
         refreshToken = self.issueRefreshToken(decodedRefreshToken["sub"],
@@ -155,10 +155,11 @@ class TokenManager:
         if not firstTime:
             key = self._TokenStore.lindex(f"FID:{familyID}", 0)
             if not key:
+                print("not found")
                 self.invalidateFamily(familyID)
                 raise TOKEN_STORE_INTEGRITY_ERROR(f"Token family {familyID} is invalid or empty")
             key_metadata = key.split(":")
-            if key_metadata[0] != jti or key_metadata[1] != exp:
+            if key_metadata[0] != jti or float(key_metadata[1]) != exp:
                 self.invalidateFamily(familyID)
                 raise TOKEN_STORE_INTEGRITY_ERROR(f"Replay attack detected or token metadata mismatch for family {familyID}")
 
@@ -168,7 +169,7 @@ class TokenManager:
 
         payload : dict = {"iat" : time.mktime(datetime.now().timetuple()),
                           "exp" : time.mktime((datetime.now() + self.refreshLifetime).timetuple()),
-                          "nbf" : time.mktime((datetime.now() + self.refreshLifetime - self.leeway).timetuple()),
+                          "nbf" : time.mktime((datetime.now() + self.accessLifetime - self.leeway).timetuple()),
 
                           "sub" : sub,
                           "jti" : self.generate_unique_identifier()}
@@ -181,7 +182,6 @@ class TokenManager:
             payload["fid"] = self.generate_unique_identifier()
         else:
             payload["fid"] = familyID
-            self.revokeTokenWithIDs(payload['jti'], familyID)
 
         self._TokenStore.lpush(f"FID:{payload['fid']}", f"{payload['jti']}:{payload['exp']}")
         self._connectionData["cursor"].execute("INSERT INTO tokens (jti, sub, iat, exp, ipa, revoked, family_id) VALUES (?,?,?,?,?,?,?)",
@@ -213,10 +213,9 @@ class TokenManager:
         '''Revokes a refresh token, without invalidating the family'''
         try:
             decoded = jwt.decode(rToken, options={"verify_signature":verify})["payload"]
-            with self._TokenStore.create_pipeline() as pipe:
-                llen = pipe.llen(f"FID:{decoded['fid']}")
-                if llen >= self.max_llen:
-                    pipe.rpop(f"FID:{decoded['fid']}", max(1, llen-self.max_llen-1))
+            llen = self._TokenStore.llen(f"FID:{decoded['fid']}")
+            if llen >= self.max_llen:
+                self._TokenStore.rpop(f"FID:{decoded['fid']}", max(1, llen-self.max_llen-1))
 
             self._connectionData["cursor"].execute("UPDATE tokens SET revoked = True WHERE jti = ?", (decoded["jti"],))
             self._connectionData["conn"].commit()
@@ -235,16 +234,18 @@ class TokenManager:
     def revokeTokenWithIDs(self, jti : str, fID : str) -> None:
         '''Revokes a refresh token using JTI and FID claims, without invalidating the family'''
         try:
-            with self._TokenStore.create_pipeline() as pipe:
-                llen = pipe.llen(f"FID:{fID}")
-                if llen >= self.max_llen:
-                    pipe.rpop(f"FID:{fID}", max(1, llen-self.max_llen-1))
+            print("Before llen: ", TokenManager.activeRefreshTokens)
+            llen = self._TokenStore.llen(f"FID:{fID}")
+            if llen >= self.max_llen:
+                self._TokenStore.rpop(f"FID:{fID}", max(1, llen-self.max_llen-1))
                 
             self._connectionData["cursor"].execute("UPDATE tokens SET revoked = True WHERE jti = ?", (jti,))
             self._connectionData["conn"].commit()
 
             self.decrementActiveTokens()
-        except ValueError:
+            print("After decrement success: ", TokenManager.activeRefreshTokens)
+        except ValueError as e:
+            print(e)
             print("Number of active tokens must be non-negative integer")
         except sqlite3.Error as db_error:
             db_error.__setattr__("description", f"Database operation failed: {db_error}")
