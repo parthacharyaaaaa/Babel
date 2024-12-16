@@ -72,7 +72,10 @@ class Cache_Manager:
 
     @safe
     def lindex(self, name : str, index : int) -> ResponseT | None:
-        return self._interface.execute_command("LINDEX", name, index)
+        result = self._interface.execute_command("LINDEX", name, index)
+        if result != None:
+            return result.decode("utf-8") if isinstance(result, bytes) else result
+        return None
     
     @safe
     def llen(self, name : str) -> int:
