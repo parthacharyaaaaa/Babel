@@ -1,10 +1,12 @@
 from babel_auth import auth, tokenManager
 from auxillary_packages.decorators import enforce_mimetype, private
+from auxillary_packages.errors import TOKEN_STORE_INTEGRITY_ERROR
 from flask import request, abort, jsonify, Response
 from werkzeug.exceptions import BadRequest, MethodNotAllowed, NotFound, Unauthorized, Forbidden, InternalServerError, HTTPException
 from datetime import datetime
 import requests
 import os
+import jwt.exceptions as JWT_exc
 
 ### Error Handlers ###
 ### Error Handlers ###
@@ -27,13 +29,21 @@ def forbidden(e : Forbidden | Unauthorized):
     return response, 403
 
 @auth.errorhandler(BadRequest)
-@auth.errorhandler(KeyError)         #NOTE: Very important to set KeyError.description here, instead of KeyError.message
+@auth.errorhandler(KeyError)
 def unexpected_request_format(e : BadRequest | KeyError):
     rBody = {"message" : getattr(e, "description", "Bad Request! Ensure proper request format")}
     if hasattr(e, "_additional_info"):
         rBody.update({"additional information" : e._additional_info})
     response = jsonify(rBody)
     return response, 400
+
+@auth.errorhandler(JWT_exc.ExpiredSignatureError)
+def exp_sign(e):
+    return jsonify({"message" : "Your token has expired, please re-issue a new one"}), 401
+
+@auth.errorhandler(TOKEN_STORE_INTEGRITY_ERROR)
+def tk_integrity_err(e):
+    return jsonify({"message" : "Token integrity check failed", "description" : getattr(e, "description", "Refresh token invalid")}), 403
 
 @auth.errorhandler(Exception)
 @auth.errorhandler(HTTPException)
