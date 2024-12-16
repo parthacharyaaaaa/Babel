@@ -9,7 +9,6 @@ import os
 import jwt.exceptions as JWT_exc
 
 ### Error Handlers ###
-### Error Handlers ###
 @auth.errorhandler(MethodNotAllowed)
 def methodNotAllowed(e : MethodNotAllowed):
     response = {"message" : f"{getattr(e, 'description', 'Method Not Allowed')}"}
@@ -133,7 +132,7 @@ def deleteAccount():
 
 @auth.route("/reissue", methods = ["GET"])
 def reissue():
-    refreshToken = request.headers.get("Refresh", request.headers.get("refresh", None))
+    refreshToken = request.headers.get("Refresh", request.headers.get("refresh", None)).strip()
 
     if not refreshToken:
         e = KeyError()
