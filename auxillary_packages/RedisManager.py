@@ -1,11 +1,11 @@
 import functools
-from typing import Literal
+from typing import Literal, Any, Iterable
 from redis import Redis
 import redis.exceptions as RedisExceptions
 from redis.typing import ResponseT
 
 class Cache_Manager:
-    def __init__(self, host : str, port : int, db : int, startup_mandate : bool = False, error_behavior : Literal["lax", "strict"] = "strict", **kwargs):
+    def __init__(self, host : str, port : int, db : int, startup_mandate : bool = True, error_behavior : Literal["lax", "strict"] = "strict", **kwargs):
         try:
             self._interface = Redis(host, int(port), int(db), kwargs)
             if startup_mandate and not self._interface.ping():
@@ -48,8 +48,8 @@ class Cache_Manager:
         self._interface.execute_command("SETEX", name, exp, value)
 
     @safe
-    def delete(self, *names) -> None:
-        self._interface.execute_command("DELETE", names)
+    def delete(self, name) -> None:
+        self._interface.execute_command("DEL", name)
 
     @safe
     def get(self, name : str) -> ResponseT | None:
@@ -59,12 +59,16 @@ class Cache_Manager:
         return None
 
     @safe
-    def lpush(self, name : str, val : str) -> None:
-        self._interface.lpush(name, val)
+    def lpush(self, name : str, val : str | Iterable[str]) -> None:
+        if isinstance(val, str):
+            self._interface.execute_command("LPUSH", name, val)
+            return None
+        
+        self._interface.execute_command("LPUSH", name, *val)
 
     @safe
-    def rpop(self, name : str, count : int = 1):
-        self._interface.rpop(name, int(count))
+    def rpop(self, name : str, count : int = 1) -> Any:
+        return self._interface.execute_command("RPOP", name, count)
 
     @safe
     def lindex(self, name : str, index : int) -> ResponseT | None:
@@ -73,3 +77,7 @@ class Cache_Manager:
     @safe
     def llen(self, name : str) -> int:
         return self._interface.execute_command("LLEN", name)
+    
+    @safe
+    def create_pipeline(self):
+        return self._interface.pipeline()
