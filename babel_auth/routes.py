@@ -1,24 +1,46 @@
 from babel_auth import auth, tokenManager
-from babel_auth.auxillary.decorators import enforce_mimetype, private
+from auxillary_packages.decorators import enforce_mimetype, private
 from flask import request, abort, jsonify, Response
-from werkzeug.exceptions import BadRequest
+from werkzeug.exceptions import BadRequest, MethodNotAllowed, NotFound, Unauthorized, Forbidden, InternalServerError, HTTPException
 from datetime import datetime
 import requests
 import os
 
 ### Error Handlers ###
-@auth.errorhandler(KeyError)
+### Error Handlers ###
+@auth.errorhandler(MethodNotAllowed)
+def methodNotAllowed(e : MethodNotAllowed):
+    response = {"message" : f"{getattr(e, 'description', 'Method Not Allowed')}"}
+    if hasattr(e, "HTTP_type") and hasattr(e, "expected_HTTP_type"):
+        response.update({"additional" : f"Expected {e.expected_HTTP_type}, got {e.HTTP_type}"})
+    return jsonify(response), 405
+
+@auth.errorhandler(NotFound)
+def resource_not_found(e : NotFound):
+    return jsonify({"message": "Requested resource could not be found."}), 404
+
+@auth.errorhandler(Forbidden)
+@auth.errorhandler(Unauthorized)
+def forbidden(e : Forbidden | Unauthorized):
+    response = jsonify({"message" : getattr(e, "description", "Resource Access Denied")})
+    response.headers.update({"issuer" : "babel-auth-flow"})
+    return response, 403
+
 @auth.errorhandler(BadRequest)
-def badRequest(e):
-    message = "Bad Request: Check message format!" if not hasattr(e, "description") else e.description
-    rBody = {"message" : message}
+@auth.errorhandler(KeyError)         #NOTE: Very important to set KeyError.description here, instead of KeyError.message
+def unexpected_request_format(e : BadRequest | KeyError):
+    rBody = {"message" : getattr(e, "description", "Bad Request! Ensure proper request format")}
     if hasattr(e, "_additional_info"):
-        rBody.update({"additional details" : e._additional_info})
-
+        rBody.update({"additional information" : e._additional_info})
     response = jsonify(rBody)
-    response.headers.update({"issuer" : "babel-auth-service"})
-
     return response, 400
+
+@auth.errorhandler(Exception)
+@auth.errorhandler(HTTPException)
+@auth.errorhandler(InternalServerError)
+def internalServerError(e : Exception):
+    # ErrorLogger.addEntryToQueue(e)
+    return jsonify({"message" : getattr(e, "description", "An Error Occured"), "Additional Info" : getattr(e, "_additional_info", "There seems to be an issue with our service, please retry after some time or contact support")}), 500
 
 ### Endpoints ###
 
