@@ -1,5 +1,5 @@
 import jwt
-from typing import Optional
+from typing import Optional, Literal
 import sqlite3
 from auxillary_packages.errors import Missing_Configuration_Error
 from auxillary_packages.RedisManager import Cache_Manager
@@ -94,7 +94,7 @@ class TokenManager:
         # Set leeway for time-related claims
         self.leeway = leeway
 
-    def decodeToken(self, token : str, checkAdditionals : bool = True, tType : str = "access") -> str:
+    def decodeToken(self, token : str, checkAdditionals : bool = True, tType : Literal["access", "refresh"] = "access") -> str:
         '''Decodes an access token, raises error in case of failure'''
         return jwt.decode(jwt = token,
                         key = self.signingKey,
@@ -178,8 +178,7 @@ class TokenManager:
             payload["fid"] = familyID
             self.revokeTokenWithIDs(payload['jti'], familyID)
 
-        self._TokenStore.lpush(payload['fid'], f"{payload['jti']}:{payload['exp']}")
-
+        self._TokenStore.lpush(f"FID:{payload['fid']}", f"{payload['jti']}:{payload['exp']}")
         self._connectionData["cursor"].execute("INSERT INTO tokens (jti, sub, iat, exp, ipa, revoked, family_id) VALUES (?,?,?,?,?,?,?)",
                              (payload["jti"], "", payload["iat"], payload["exp"], payload.get("ipa"), False, payload["fid"] if firstTime else familyID))
         self._connectionData["conn"].commit()
@@ -229,7 +228,7 @@ class TokenManager:
         try:
             llen = self._TokenStore.llen()
             if llen >= self.max_llen:
-                self._TokenStore.rpop(fID, max(1, llen-self.max_llen-1))
+                self._TokenStore.rpop(f"FID:{fID}", max(1, llen-self.max_llen-1))
             
 
             self._connectionData["cursor"].execute("UPDATE tokens SET revoked = True WHERE jti = ?", (jti,))
@@ -244,7 +243,6 @@ class TokenManager:
     @singleThreadOnly
     def invalidateFamily(self, fID : str) -> None:
         '''Remove entire token family from revocation list and token store'''
-        print(fID)
         self._TokenStore.delete(f"FID:{fID}")
 
         self._connectionData["cursor"].execute("DELETE FROM tokens WHERE family_id = ?", (fID,))
