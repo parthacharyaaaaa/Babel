@@ -9,7 +9,7 @@ import time
 from datetime import datetime, timedelta
 from typing import TypeAlias
 from functools import wraps
-from jwt.exceptions import PyJWTError, DecodeError, ExpiredSignatureError, InvalidIssuedAtError, InvalidIssuerError
+import jwt.exceptions as JWTexc
 
 # Aliases
 tokenPair : TypeAlias = tuple[str, str]
@@ -17,14 +17,14 @@ tokenPair : TypeAlias = tuple[str, str]
 # Helper
 def singleThreadOnly(func):
     @wraps(func)
-    def decorated(self, *args, **kwargs):
-        self._connectionData["conn"]= sqlite3.connect(self._connString, uri=True)
-        self._connectionData["cursor"] = sqlite3.Cursor(self._connectionData["conn"])
+    def decorated(*args, **kwargs):
+        args[0]._connectionData["conn"]= sqlite3.connect(args[0]._connString, uri=True)
+        args[0]._connectionData["cursor"] = sqlite3.Cursor(args[0]._connectionData["conn"])
         try:
-            op = func(self, *args, **kwargs)
+            op = func(*args, **kwargs)
         finally:
-            self._connectionData["conn"].close()
-            self._connectionData.clear()
+            args[0]._connectionData["conn"].close()
+            args[0]._connectionData.clear()
         
         return op
     return decorated
@@ -112,9 +112,12 @@ class TokenManager:
         try:
             decodedRefreshToken = self.decodeToken(rToken, tType = "refresh")
             self.revokeToken(decodedRefreshToken["jti"])
-        except:
-            raise PermissionError("Invalid token") # Will replace permission error with a custom token error later
-        
+        except JWTexc.ImmatureSignatureError as e:
+            self.invalidateFamily(jwt.decode(rToken, options={"verify_signature":False})["fid"]) 
+            raise PermissionError()
+        except Exception as e:
+            print("Failed to decode token")
+            raise e
         # issue tokens here
         refreshToken = self.issueRefreshToken(decodedRefreshToken["sub"],
                                               firstTime=False,
@@ -241,6 +244,7 @@ class TokenManager:
     @singleThreadOnly
     def invalidateFamily(self, fID : str) -> None:
         '''Remove entire token family from revocation list and token store'''
+        print(fID)
         self._TokenStore.delete(f"FID:{fID}")
 
         self._connectionData["cursor"].execute("DELETE FROM tokens WHERE family_id = ?", (fID,))
