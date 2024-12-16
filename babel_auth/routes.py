@@ -40,6 +40,7 @@ def unexpected_request_format(e : BadRequest | KeyError):
 @auth.errorhandler(InternalServerError)
 def internalServerError(e : Exception):
     # ErrorLogger.addEntryToQueue(e)
+    print(e.__class__)
     return jsonify({"message" : getattr(e, "description", "An Error Occured"), "Additional Info" : getattr(e, "_additional_info", "There seems to be an issue with our service, please retry after some time or contact support")}), 500
 
 ### Endpoints ###
@@ -137,11 +138,12 @@ def purgeFamily():
     '''
     Purges an entire token family in case of a reuse attack or a normal client logout
     '''
-    familyID = request.headers.get("Refresh", request.headers.get("refresh"))
-    if not familyID:
+    tkn = tokenManager.decodeToken(request.headers.get("Refresh", request.headers.get("refresh")),
+                                        tType="refresh",
+                                        options={"verify_nbf" : False})
+    if not tkn:
         raise BadRequest(f"Invalid Refresh Token provided to [{request.method}] {request.url_rule}")
-    
-    tokenManager.invalidateFamily(familyID)
+    tokenManager.invalidateFamily(tkn['fid'])
     response : Response = jsonify({"message" : "Token Revoked"})
     response.headers["iss"] = "babel-auth-service"
 

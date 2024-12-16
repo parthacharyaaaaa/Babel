@@ -94,13 +94,14 @@ class TokenManager:
         # Set leeway for time-related claims
         self.leeway = leeway
 
-    def decodeToken(self, token : str, checkAdditionals : bool = True, tType : Literal["access", "refresh"] = "access") -> str:
+    def decodeToken(self, token : str, checkAdditionals : bool = True, tType : Literal["access", "refresh"] = "access", **kwargs) -> str:
         '''Decodes an access token, raises error in case of failure'''
         return jwt.decode(jwt = token,
                         key = self.signingKey,
                         algorithms = [self.accessHeaders["alg"] if tType == "access" else self.refreshHeaders["alg"]],
                         leeway = self.leeway,
-                        issuer="babel-auth-service")
+                        issuer="babel-auth-service",
+                        options=kwargs.get('options'))
 
     def reissueTokenPair(self, rToken : str) -> tokenPair:
         '''Issue a new token pair from a given refresh token
