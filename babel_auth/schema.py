@@ -15,21 +15,6 @@ import jwt.exceptions as JWTexc
 # Aliases
 tokenPair : TypeAlias = tuple[str, str]
 
-# Helper
-def singleThreadOnly(func):
-    @wraps(func)
-    def decorated(*args, **kwargs):
-        args[0]._connectionData["conn"]= sqlite3.connect(args[0]._connString, uri=True)
-        args[0]._connectionData["cursor"] = sqlite3.Cursor(args[0]._connectionData["conn"])
-        try:
-            op = func(*args, **kwargs)
-        finally:
-            args[0]._connectionData["conn"].close()
-            args[0]._connectionData.clear()
-        
-        return op
-    return decorated
-
 class TokenManager:
     '''### Class for issuing and verifying access and refresh tokens assosciated with authentication and authorization
     
@@ -41,7 +26,6 @@ class TokenManager:
     activeRefreshTokens : int = 0
 
     def __init__(self, signingKey : str,
-                 connString : str,
                  refreshSchema : dict,
                  accessSchema : dict, 
                  alg : str = "HS256",
@@ -63,8 +47,6 @@ class TokenManager:
         uClaims (dict-like): Universal claims to include for both access and refresh tokens\n
         additonalHeaders (dict-like): Additional header information, universal to all tokens'''
 
-        self._connString = connString
-        self._connectionData = dict()
         try:
             self._TokenStore = Cache_Manager(os.environ["REDIS_HOST"],
                              os.environ["REDIS_PORT"],
@@ -131,7 +113,6 @@ class TokenManager:
         
         return refreshToken, accessToken
 
-    @singleThreadOnly
     def issueRefreshToken(self, sub : str,
                           additionalClaims : Optional[dict] = None,
                           firstTime : bool = False,
@@ -184,10 +165,6 @@ class TokenManager:
             payload["fid"] = familyID
 
         self._TokenStore.lpush(f"FID:{payload['fid']}", f"{payload['jti']}:{payload['exp']}")
-        self._connectionData["cursor"].execute("INSERT INTO tokens (jti, sub, iat, exp, ipa, revoked, family_id) VALUES (?,?,?,?,?,?,?)",
-                             (payload["jti"], "", payload["iat"], payload["exp"], payload.get("ipa"), False, payload["fid"] if firstTime else familyID))
-        self._connectionData["conn"].commit()
-
         self.incrementActiveTokens()
 
         return jwt.encode(payload=payload,
@@ -211,39 +188,25 @@ class TokenManager:
                           algorithm=self.accessHeaders["alg"],
                           headers=self.accessHeaders)
 
-    @singleThreadOnly
     def revokeTokenWithIDs(self, jti : str, fID : str) -> None:
         '''Revokes a refresh token using JTI and FID claims, without invalidating the family'''
         try:
             llen = self._TokenStore.llen(f"FID:{fID}")
             if llen >= self.max_llen:
                 self._TokenStore.rpop(f"FID:{fID}", max(1, llen-self.max_llen-1))
-                
-            self._connectionData["cursor"].execute("UPDATE tokens SET revoked = True WHERE jti = ?", (jti,))
-            self._connectionData["conn"].commit()
 
             self.decrementActiveTokens()
         except ValueError as e:
             print("Number of active tokens must be non-negative integer")
-        except sqlite3.Error as db_error:
-            db_error.__setattr__("description", f"Database operation failed: {db_error}")
-            raise db_error
         except Exception as e:
             raise InternalServerError("Failed to perform operation on token store")
 
-    @singleThreadOnly
     def invalidateFamily(self, fID : str) -> None:
         '''Remove entire token family from revocation list and token store'''
         try:
             self._TokenStore.delete(f"FID:{fID}")
 
-            self._connectionData["cursor"].execute("DELETE FROM tokens WHERE family_id = ?", (fID,))
-            self._connectionData["conn"].commit()
-
             self.decrementActiveTokens()
-        except sqlite3.Error as db_error:
-            db_error.__setattr__("description", f"Database operation failed: {db_error}")
-            raise db_error
         except Exception as e:
             raise InternalServerError("Failed to perform operation on token store")
 
