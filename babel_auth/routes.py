@@ -8,6 +8,7 @@ import requests
 import os
 import jwt.exceptions as JWT_exc
 from datetime import timedelta
+import traceback
 
 ### Error Handlers ###
 @auth.errorhandler(MethodNotAllowed)
@@ -50,6 +51,7 @@ def tk_integrity_err(e):
 @auth.errorhandler(InternalServerError)
 def internalServerError(e : Exception):
     # ErrorLogger.addEntryToQueue(e)
+    print(traceback.format_exc())
     print(e.__class__)
     return jsonify({"message" : getattr(e, "description", "An Error Occured"), "Additional Info" : getattr(e, "_additional_info", "There seems to be an issue with our service, please retry after some time or contact support")}), 500
 
@@ -80,6 +82,8 @@ def login():
     response = jsonify({
         "message" : "Login complete",
         "time_of_issuance" : datetime.now(),
+        "access_exp" : datetime.now() + tokenManager.accessLifetime,
+        "leeway" : tokenManager.leeway.total_seconds(),
         "issuer" : "babel-auth-service"
     })
     response.set_cookie(key="access",
@@ -88,9 +92,8 @@ def login():
                         httponly=True)
     response.set_cookie(key="refresh",
                         value=rToken,
-                        max_age=tokenManager.refreshLifetime + tokenManager.leeway*3,
-                        httponly=True,
-                        path="/reissue")
+                        max_age=tokenManager.refreshLifetime + tokenManager.leeway,
+                        httponly=True)
     return response, 201
 
 @auth.route("/register", methods = ["POST"])
@@ -127,6 +130,8 @@ def register():
     response = jsonify({
         "message" : "Registration complete, sign-in done.",
         "time_of_issuance" : datetime.now(),
+        "access_exp" : datetime.now() + tokenManager.accessLifetime,
+        "leeway" : tokenManager.leeway.total_seconds(),
         "issuer" : "babel-auth-service"
     })
 
@@ -136,7 +141,7 @@ def register():
                         httponly=True)
     response.set_cookie(key="refresh",
                         value=rToken,
-                        max_age=tokenManager.refreshLifetime + tokenManager.leeway*3,
+                        max_age=tokenManager.refreshLifetime + tokenManager.leeway,
                         httponly=True,
                         path="/reissue")
 
@@ -149,15 +154,35 @@ def deleteAccount():
 
 @auth.route("/reissue", methods = ["GET"])
 def reissue():
-    refreshToken = request.headers.get("Refresh", request.headers.get("refresh", None)).strip()
+    refreshToken = request.cookies.get("refresh", request.cookies.get("Refresh"))
+    print("Old Token", refreshToken)
 
     if not refreshToken:
         e = KeyError()
         e.__setattr__("description", "Refresh Token missing from request, reissuance denied")
         raise e
     
-    nAccessToken, nRefreshToken = tokenManager.reissueTokenPair(refreshToken)
-    return jsonify({"access" : nAccessToken, "refresh" : nRefreshToken}), 201
+    nRefreshToken, nAccessToken = tokenManager.reissueTokenPair(refreshToken)
+    response = jsonify({
+        "message" : "Reissuance successful",
+        "time_of_issuance" : datetime.now(),
+        "access_exp" : datetime.now() + tokenManager.accessLifetime,
+        "leeway" : tokenManager.leeway.total_seconds(),
+        "issuer" : "babel-auth-service"
+    })
+
+    response.set_cookie(key="access",
+                        value=nAccessToken,
+                        max_age=tokenManager.accessLifetime + tokenManager.leeway,
+                        httponly=True)
+    response.set_cookie(key="refresh",
+                        value=nRefreshToken,
+                        max_age=tokenManager.refreshLifetime + tokenManager.leeway,
+                        httponly=True)
+    
+    print("New Token: ", nRefreshToken)
+
+    return response, 201
 
 @auth.route("/purge-family", methods = ["GET"])
 def purgeFamily():
@@ -182,3 +207,10 @@ def blacklist():
 @auth.route("/get-blacklist", methods = ["GET"])
 def getBlacklist():
     ...
+
+
+@auth.route("/tkn", methods=["GET"])
+def tkn():
+    rsp = jsonify(tokenManager.activeRefreshTokens)
+    print(rsp.headers)
+    return rsp
