@@ -179,7 +179,6 @@ class TokenManager:
             payload.update(additionalClaims)
 
         if firstTime:
-            TokenManager.activeRefreshTokens += 1
             payload["fid"] = self.generate_unique_identifier()
         else:
             payload["fid"] = familyID
@@ -188,6 +187,9 @@ class TokenManager:
         self._connectionData["cursor"].execute("INSERT INTO tokens (jti, sub, iat, exp, ipa, revoked, family_id) VALUES (?,?,?,?,?,?,?)",
                              (payload["jti"], "", payload["iat"], payload["exp"], payload.get("ipa"), False, payload["fid"] if firstTime else familyID))
         self._connectionData["conn"].commit()
+
+        self.incrementActiveTokens()
+
         return jwt.encode(payload=payload,
                           key=self.signingKey,
                           algorithm=self.refreshHeaders["alg"],
@@ -237,6 +239,8 @@ class TokenManager:
 
             self._connectionData["cursor"].execute("DELETE FROM tokens WHERE family_id = ?", (fID,))
             self._connectionData["conn"].commit()
+
+            self.decrementActiveTokens()
         except sqlite3.Error as db_error:
             db_error.__setattr__("description", f"Database operation failed: {db_error}")
             raise db_error
@@ -248,6 +252,10 @@ class TokenManager:
         if TokenManager.activeRefreshTokens == 0:
             raise ValueError("Active refresh tokens cannot be a negative number")
         TokenManager.activeRefreshTokens -= 1
+
+    @staticmethod
+    def incrementActiveTokens():
+        TokenManager.activeRefreshTokens += 1
     
     @staticmethod
     def generate_unique_identifier():
