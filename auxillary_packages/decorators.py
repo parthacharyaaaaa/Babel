@@ -13,7 +13,7 @@ def token_required(endpoint):
     @functools.wraps(endpoint)
     def decorated(*args, **kwargs):
         try:
-            auth_metadata = request.headers.get("Authorization", request.headers.get("authorization", None))
+            auth_metadata = request.cookies.get("access", request.cookies.get("Access"))
             if not auth_metadata:
                 raise Unauthorized("Authentication details missing")
             decodedToken = decode(
