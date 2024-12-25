@@ -7,6 +7,7 @@ from datetime import datetime
 import requests
 import os
 import jwt.exceptions as JWT_exc
+from datetime import timedelta
 
 ### Error Handlers ###
 @auth.errorhandler(MethodNotAllowed)
@@ -77,12 +78,19 @@ def login():
                                             firstTime=True)
 
     response = jsonify({
-        "access" : aToken,
-        "refresh" : rToken,
+        "message" : "Login complete",
         "time_of_issuance" : datetime.now(),
         "issuer" : "babel-auth-service"
     })
-
+    response.set_cookie(key="access",
+                        value=aToken,
+                        max_age=tokenManager.accessLifetime + tokenManager.leeway,
+                        httponly=True)
+    response.set_cookie(key="refresh",
+                        value=rToken,
+                        max_age=tokenManager.refreshLifetime + tokenManager.leeway*3,
+                        httponly=True,
+                        path="/reissue")
     return response, 201
 
 @auth.route("/register", methods = ["POST"])
@@ -107,7 +115,7 @@ def register():
                           json = registrationDetails,
                           headers={"AUTH-API-KEY" : os.environ["AUTH_API_KEY"]})
     
-    if valid.status_code != 200:
+    if valid.status_code != 201:
         return jsonify({"message" : "Failed to create account",
                         "response_message" : valid.json().get("message", "Sowwy >:3")}), valid.status_code
     
@@ -117,11 +125,20 @@ def register():
                                             firstTime=True)
 
     response = jsonify({
-        "access" : aToken,
-        "refresh" : rToken,
+        "message" : "Registration complete, sign-in done.",
         "time_of_issuance" : datetime.now(),
         "issuer" : "babel-auth-service"
     })
+
+    response.set_cookie(key="access",
+                        value=aToken,
+                        max_age=tokenManager.accessLifetime + tokenManager.leeway,
+                        httponly=True)
+    response.set_cookie(key="refresh",
+                        value=rToken,
+                        max_age=tokenManager.refreshLifetime + tokenManager.leeway*3,
+                        httponly=True,
+                        path="/reissue")
 
     return response, 201
 
