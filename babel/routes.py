@@ -147,10 +147,17 @@ def getUser(name):
 @enforce_mimetype("JSON")
 @token_required
 def delete_account():
+    rToken = request.cookies.get("refresh", request.cookies.get("Refresh"))
+    if not rToken:
+        raise BadRequest(f"POST /{request.path[1:]} requires a refresh token to allow account deletion. Please reauthenticate yourself and then repeat the deletion process. If this issue persists, contact support")
     password : str = request.get_json(force=True)["password"]
     if not password:
         raise BadRequest(f"POST /{request.path[1:]} Password missing")
     try:
+        uPass = db.session.execute(select(User.password).where(User.username == g.decodedToken["sub"])).scalar_one_or_none()
+        if not bcrypt.check_password_hash(uPass, password):
+            raise Unauthorized("Incorrect password")
+
         db.session.execute(update(User)
                            .where(User.username == g.decodedToken["sub"])
                            .values(deleted = True, time_deleted = datetime.now()))
@@ -159,11 +166,9 @@ def delete_account():
         db.session.rollback()
         abort(500)
 
-    # Logic for sending an API request to auth server to instantly delete all assosciated refresh tokens
-    requests.get(url=f"{app.config['AUTH_COMMUNICATION_PROTOCOL']}://{app.config['AUTH_SERVER_ORIGIN']}/purge-family",
-                headers={"Refresh" : g.decodedToken["fid"]})
-    
-    return jsonify({"message" : "Account Deleted Successfully"}), 200
+    requests.delete(url=f"{app.config['AUTH_COMMUNICATION_PROTOCOL']}://{app.config['AUTH_SERVER_ORIGIN']}/delete-account",
+                headers={"refreshID" : g.decodedToken["fid"], "AUTH-API-KEY" : os.environ["AUTH_API_KEY"]})
+    return jsonify({"message" : "Account Deleted Successfully"}), 204
 
 @app.route("/fetch-history", methods = ["GET"])
 @token_required
