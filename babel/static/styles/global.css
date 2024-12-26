@@ -3,61 +3,83 @@
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&family=SUSE:wght@100..800&display=swap');
 
 /* CSS RESET */
-*{
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
 /* VARIABLES */
-:root{
-    /* Colors */
-    --PRIMARY-BG: #0d1b2a;
-    --SECONDARY-BG: #1b263b;
-    --PRIMARY-TEXT-COLOR: #ffffff;
-    --SECONDARY-TEXT-COLOR: #e0e1dd;
-    --TERTIARY-TEXT-COLOR: #778da9;
-    --BORDER-COLOR: #415a77;
-    
-    /* Fonts */
-    --MAIN-FONT: "SUSE", sans-serif;
-    --SECONDARY-FONT: "Montserrat", sans-serif;
-    
-    --FSIZE-XL: 2rem;
-    --FSIZE-L: 1.5rem;
-    --FSIZE: 1rem;
-    --FSIZE-S: 0.8rem;
-    --FSIZE-XS: 0.5rem;
+:root {
+  /* Colors */
+  --PRIMARY-BG: #0d1b2a;
+  --SECONDARY-BG: #1b263b;
+  --PRIMARY-TEXT-COLOR: #ffffff;
+  --SECONDARY-TEXT-COLOR: #e0e1dd;
+  --TERTIARY-TEXT-COLOR: #778da9;
+  --BORDER-COLOR: #415a77;
+
+  /* Fonts */
+  --MAIN-FONT: "SUSE", sans-serif;
+  --SECONDARY-FONT: "Montserrat", sans-serif;
+
+  --FSIZE-XL: 2rem;
+  --FSIZE-L: 1.5rem;
+  --FSIZE: 1rem;
+  --FSIZE-S: 0.8rem;
+  --FSIZE-XS: 0.5rem;
 }
 
 /* HEADER */
-header{
-    background-color: var(--PRIMARY-BG);
-    padding: 1rem;
-
-    display: flex;
+header {
+  background-color: var(--SECONDARY-BG);
+  padding: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
-body{
-    background-color: var(--PRIMARY-BG);
-    font-size: var(--FSIZE);
-    color: var(--PRIMARY-TEXT-COLOR);
-    font-family: var(--MAIN-FONT);
+header nav ul {
+  list-style: none;
+  display: flex;
 }
 
-main{
-    display: flex;
-    flex-direction: column;
-    /* align-items: space-between; */
+header nav ul li {
+  margin: 0 1rem;
+}
+
+header nav ul li a {
+  color: var(--PRIMARY-TEXT-COLOR);
+  text-decoration: none;
+  font-size: var(--FSIZE-L);
+}
+
+header nav ul li a:hover {
+  color: var(--SECONDARY-TEXT-COLOR);
+}
+
+body {
+  background-color: var(--PRIMARY-BG);
+  font-size: var(--FSIZE);
+  color: var(--PRIMARY-TEXT-COLOR);
+  font-family: var(--MAIN-FONT);
+}
+
+main {
+  display: flex;
+  flex-direction: column;
+  /* padding: 1.5rem; */
+  /* align-items: space-between; */
 }
 
 /* FOOTER */
-footer{
-    background-color: var(--PRIMARY-BG);
-    padding: 1rem;
-
-    display: flex;
-    justify-content: center;
+footer {
+  background-color: var(--PRIMARY-BG);
+  padding: 1rem;
+  display: flex;
+  justify-content: center;
+  color: var(--SECONDARY-TEXT-COLOR);
+  font-size: var(--FSIZE-S);
 }
 
 /* Global Assets */
@@ -71,7 +93,7 @@ footer{
   color: var(--TERTIARY-TEXT-COLOR);
   cursor: pointer;
   display: inline-flex;
-  font-family: system-ui,-apple-system,system-ui,"Helvetica Neue",Helvetica,Arial,sans-serif;
+  font-family: system-ui, -apple-system, system-ui, "Helvetica Neue", Helvetica, Arial, sans-serif;
   font-size: 16px;
   font-weight: 600;
   justify-content: center;
@@ -108,7 +130,7 @@ footer{
 }
 
 .spinner {
-  border: 4px solid rgba(0,0,0,0.1);
+  border: 4px solid rgba(0, 0, 0, 0.1);
   border-left: 4px solid #3498db;
   border-radius: 50%;
   width: 40px;
@@ -119,6 +141,11 @@ footer{
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
 }
