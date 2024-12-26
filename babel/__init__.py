@@ -20,5 +20,5 @@ RedisManager = Cache_Manager(os.environ["REDIS_HOST"],
 
 ErrorLogger = Logger(app.config["ERROR_LOG_FILE"])
 
-from babel import routes
+from babel import routes, views
 from babel import models
