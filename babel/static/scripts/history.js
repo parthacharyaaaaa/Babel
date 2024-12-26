@@ -22,6 +22,18 @@ async function getHistory(sortOption, filterOption, pageNumber = 1) {
             date.innerText = `Time: ${result.time_requested}`;
             date.classList.add("history-date");
 
+            let type = document.createElement("span");
+            type.innerText = `Type: ${result.type}`;
+            type.classList.add("history-type")
+
+            let language = document.createElement("span");
+            if (result.type === "translation"){
+                language.innerText = `${result.dst} -> ${result.src}`
+            }
+            else{
+                language.innerText = `Detected Language: ${result.lang}`
+            }
+
             let content = document.createElement("span");
             content.innerText = `Contents: ${result.content}`;
             content.classList.add("history-contents");
@@ -31,6 +43,7 @@ async function getHistory(sortOption, filterOption, pageNumber = 1) {
             id.classList.add("history-id");
 
             entry.appendChild(date);
+            entry.appendChild(language);
             entry.appendChild(content);
             entry.appendChild(id);
 
