@@ -2,7 +2,64 @@
 {% block title %} Babel | Home {% endblock %}
 
 {% block depends %}
+<link rel="stylesheet" type="text/css" href="{{url_for('static', filename='styles/home.css')}}">
 {% endblock %}
 
 {% block content %}
+  <section class="hero">
+    <div class="container">
+      <h1>Welcome to Babel</h1>
+      <p>Your trusted resource server for secure JWT authentication.</p>
+    </div>
+  </section>
+
+  <section class="about">
+    <div class="container">
+      <h2>About Babel</h2>
+      <p>Babel is a resource server I built to efficiently handle JWT authentication. Designed with security and performance in mind, Babel enables applications to manage token generation, validation, and revocation with minimal latency. The server handles all aspects of user authentication, ensuring a seamless integration with your application’s backend, from single-sign-on capabilities to robust token management.</p>
+      <p>This project leverages a carefully chosen tech stack to ensure both flexibility and scalability. It provides a fast, reliable, and secure solution to any application that requires token-based authentication, ensuring that your services are protected from unauthorized access while maintaining high performance.</p>
+    </div>
+  </section>
+
+  <section class="goal">
+    <div class="container">
+      <h2>Our Goal</h2>
+      <p>The goal of Babel is to offer a simple yet secure JWT authentication solution that can be easily integrated with any backend system. By automating key authentication processes like token generation, validation, and revocation, Babel makes it easy for developers to manage user authentication and protect their applications from potential security threats.</p>
+      <p>Whether you are building RESTful APIs, microservices, or web apps, Babel provides the backbone for a secure and efficient authentication flow. With support for advanced token features such as token rotation, revocation, and expiration management, Babel ensures that your application remains secure as it scales.</p>
+    </div>
+  </section>
+
+  <section class="tech-stack">
+    <div class="container">
+      <h2>Tech Stack</h2>
+      <p>Babel is powered by a comprehensive tech stack that combines some of the most reliable and efficient technologies in modern web development:</p>
+      <ul>
+        <li><strong>Python</strong>: The core language powering Babel, known for its simplicity and versatility.</li>
+        <li><strong>Flask</strong>: A lightweight Python web framework used to build and expose the authentication services.</li>
+        <li><strong>SQLAlchemy</strong>: An ORM that simplifies database interactions, allowing Babel to interact with SQLite and other SQL-based databases easily.</li>
+        <li><strong>Alembic</strong>: Used for database migrations to manage schema changes and versioning.</li>
+        <li><strong>SQLite</strong>: A fast, self-contained database for storing user data and refresh tokens, used for persistent storage in Babel.</li>
+        <li><strong>Redis</strong>: Employed as a caching layer for managing token revocation lists and improving system performance.</li>
+        <li><strong>PyJWT</strong>: A Python library to handle JWT creation, validation, and parsing securely.</li>
+        <li><strong>GoogleTrans</strong>: Used for translation services to support multi-language environments within Babel.</li>
+        <li><strong>AssemblyAI</strong>: Integrated to provide speech-to-text functionality, enabling more flexible interactions within the system.</li>
+        <li><strong>JavaScript</strong>: Used in the frontend for any necessary dynamic content and interactions.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="credits">
+    <div class="container">
+      <h2>Credits</h2>
+      <p>This project is entirely built by me, from the ground up, as part of my efforts to create a robust authentication solution. I’d like to acknowledge the open-source community for the invaluable libraries and tools that made this possible. Libraries like Flask, SQLAlchemy, Alembic, and PyJWT have been fundamental in building this resource server. Without these resources, the development process would not have been as smooth and efficient.</p>
+      <p>Special thanks to the creators of Redis for their amazing in-memory data structure store, which allows Babel to scale and perform optimally even under heavy traffic.</p>
+    </div>
+  </section>
+
+  <section class="contact">
+    <div class="container">
+      <h2>Contact Me</h2>
+      <p>If you have any questions or feedback about Babel, feel free to reach out. You can contact me directly at <a href="mailto:support@babel.com">support@babel.com</a>.</p>
+    </div>
+  </section>
 {% endblock %}
