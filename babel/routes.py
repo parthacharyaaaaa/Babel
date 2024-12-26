@@ -74,8 +74,8 @@ def register():
     except KeyError as k:
         raise BadRequest(f"POST /{request.path[1:]} Mandatory field missing")
 
-    userExists = db.session.execute(select(User).where(User.username == uname)).first()
-    emailExists = db.session.execute(select(User).where(User.email_id == email)).first()
+    userExists = db.session.execute(select(User).where(User.username == uname, User.deleted == 0)).first()
+    emailExists = db.session.execute(select(User).where(User.email_id == email, User.deleted == 0)).first()
 
     if emailExists:
         return jsonify({"message" : "This email address is already registered, please log in or use a different email address"}), 409
@@ -263,7 +263,7 @@ def transcript_speech():
                                    transcripted_text=result["text"],
                                    time_requested=datetime.fromtimestamp(starting_time)))
         db.session.execute(update(User)
-                           .where(User.id == g.decodedToken["sub"])
+                           .where(User.id == g.decodedToken["sub"], User.deleted == 0)
                            .values(transcriptions=User.transcriptions + 1))
         db.session.commit()
     except (IntegrityError, DataError, ValueError, CompileError):
@@ -310,7 +310,7 @@ def translate_text():
                                         time_requested=datetime.fromtimestamp(start_time))
                                 )
             db.session.execute(update(User)
-                               .where(User.username == g.decodedToken["sub"])
+                               .where(User.username == g.decodedToken["sub"], User.deleted == 0)
                                .values(translations = User.translations + 1))
             db.session.commit()
         except (IntegrityError, DataError, StatementError):
