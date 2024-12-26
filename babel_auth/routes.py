@@ -3,11 +3,10 @@ from auxillary_packages.decorators import enforce_mimetype, private
 from auxillary_packages.errors import TOKEN_STORE_INTEGRITY_ERROR
 from flask import request, abort, jsonify, Response
 from werkzeug.exceptions import BadRequest, MethodNotAllowed, NotFound, Unauthorized, Forbidden, InternalServerError, HTTPException
-from datetime import datetime
 import requests
 import os
 import jwt.exceptions as JWT_exc
-from datetime import timedelta
+import time
 import traceback
 
 ### CORS ###
@@ -89,11 +88,12 @@ def login():
     rToken = tokenManager.issueRefreshToken(sub = subject,
                                             firstTime=True)
 
+    epoch = time.time()
     response = jsonify({
         "message" : "Login complete",
-        "time_of_issuance" : datetime.now(),
-        "access_exp" : datetime.now() + tokenManager.accessLifetime,
-        "leeway" : tokenManager.leeway.total_seconds(),
+        "time_of_issuance" : epoch,
+        "access_exp" : epoch + tokenManager.accessLifetime,
+        "leeway" : tokenManager.leeway,
         "issuer" : "babel-auth-service"
     })
     response.set_cookie(key="access",
@@ -133,12 +133,12 @@ def register():
     aToken = tokenManager.issueAccessToken(sub = subject)
     rToken = tokenManager.issueRefreshToken(sub = subject,
                                             firstTime=True)
-
+    epoch = time.time()
     response = jsonify({
         "message" : "Registration complete, sign-in done.",
-        "time_of_issuance" : datetime.now(),
-        "access_exp" : datetime.now() + tokenManager.accessLifetime,
-        "leeway" : tokenManager.leeway.total_seconds(),
+        "time_of_issuance" : epoch,
+        "access_exp" : epoch + tokenManager.accessLifetime,
+        "leeway" : tokenManager.leeway,
         "issuer" : "babel-auth-service"
     })
 
@@ -170,11 +170,12 @@ def reissue():
         raise e
     
     nRefreshToken, nAccessToken = tokenManager.reissueTokenPair(refreshToken)
+    epoch = time.time()
     response = jsonify({
         "message" : "Reissuance successful",
-        "time_of_issuance" : datetime.now(),
-        "access_exp" : datetime.now() + tokenManager.accessLifetime,
-        "leeway" : tokenManager.leeway.total_seconds(),
+        "time_of_issuance" : epoch,
+        "access_exp" : epoch + tokenManager.accessLifetime,
+        "leeway" : tokenManager.leeway,
         "issuer" : "babel-auth-service"
     })
 

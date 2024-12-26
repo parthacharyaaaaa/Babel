@@ -1,15 +1,12 @@
 import jwt
 from typing import Optional, Literal
-import sqlite3
 from auxillary_packages.errors import Missing_Configuration_Error, TOKEN_STORE_INTEGRITY_ERROR
 from auxillary_packages.RedisManager import Cache_Manager
 from werkzeug.exceptions import InternalServerError
 import os
 import uuid
 import time
-from datetime import datetime, timedelta
 from typing import TypeAlias
-from functools import wraps
 import jwt.exceptions as JWTexc
 
 # Aliases
@@ -32,7 +29,7 @@ class TokenManager:
                  typ : str = "JWT",
                  uClaims : dict = {"iss" : "babel-auth-service"},
                  uHeaders : dict | None = None,
-                 leeway : timedelta = timedelta(minutes=3),
+                 leeway : int = 180,
                  max_tokens_per_fid : int = 3):
         '''Initialize the token manager and set universal headers and claims, common to both access and refresh tokens
         
@@ -71,8 +68,8 @@ class TokenManager:
         # These should at the very least contain registered claims like "exp"
         self.uClaims = uClaims
 
-        self.refreshLifetime = timedelta(minutes=refreshSchema["metadata"]["lifetime"])
-        self.accessLifetime = timedelta(minutes=accessSchema["metadata"]["lifetime"])
+        self.refreshLifetime = refreshSchema["metadata"]["lifetime"]
+        self.accessLifetime = accessSchema["metadata"]["lifetime"]
 
         # Set leeway for time-related claims
         self.leeway = leeway
@@ -149,9 +146,9 @@ class TokenManager:
             self.invalidateFamily(familyID)
             raise TOKEN_STORE_INTEGRITY_ERROR(f"Token family {familyID} already exists, cannot issue a new token with the same family")
 
-        payload : dict = {"iat" : time.mktime(datetime.now().timetuple()),
-                          "exp" : time.mktime((datetime.now() + self.refreshLifetime).timetuple()),
-                          "nbf" : time.mktime((datetime.now() + self.accessLifetime - self.leeway).timetuple()),
+        payload : dict = {"iat" : time.time(),
+                          "exp" : time.time() + self.refreshLifetime,
+                          "nbf" : time.time() + self.accessLifetime - self.leeway,
 
                           "sub" : sub,
                           "jti" : self.generate_unique_identifier()}
@@ -174,8 +171,8 @@ class TokenManager:
 
     def issueAccessToken(self, sub : str, 
                          additionalClaims : Optional[dict] = None) -> str:
-        payload : dict = {"iat" : time.mktime(datetime.now().timetuple()),
-                          "exp" : time.mktime((datetime.now() + self.accessLifetime).timetuple()),
+        payload : dict = {"iat" : time.time(),
+                          "exp" : time.time() + self.accessLifetime,
                           "iss" : "babel-auth-service",
                           
                           "sub" : sub,

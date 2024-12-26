@@ -16,6 +16,6 @@
         "fid" : ""
     },
     "metadata" : {
-        "lifetime" : 120
+        "lifetime" : 7200
     }
 }
