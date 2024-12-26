@@ -84,3 +84,7 @@ class Cache_Manager:
     @safe
     def create_pipeline(self):
         return self._interface.pipeline()
+    
+    @safe
+    def expireat(self, key : str, exp : int | float) -> None:
+        self._interface.execute_command("EXPIREAT", key, exp)

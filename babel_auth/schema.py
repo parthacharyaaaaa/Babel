@@ -134,7 +134,6 @@ class TokenManager:
         if not firstTime:
             key = self._TokenStore.lindex(f"FID:{familyID}", 0)
             if not key:
-                print("not found")
                 self.invalidateFamily(familyID)
                 raise TOKEN_STORE_INTEGRITY_ERROR(f"Token family {familyID} is invalid or empty")
             key_metadata = key.split(":")
@@ -162,6 +161,7 @@ class TokenManager:
             payload["fid"] = familyID
 
         self._TokenStore.lpush(f"FID:{payload['fid']}", f"{payload['jti']}:{payload['exp']}")
+        self._TokenStore.expireat(f"FID:{payload['fid']}", int(payload["exp"]))
         self.incrementActiveTokens()
 
         return jwt.encode(payload=payload,
