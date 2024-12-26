@@ -10,6 +10,16 @@ import jwt.exceptions as JWT_exc
 from datetime import timedelta
 import traceback
 
+### CORS ###
+@auth.after_request
+def add_cors_headers(response):
+    response.headers["Access-Control-Allow-Origin"] = "http://192.168.0.105:5000"
+    response.headers["Access-Control-Allow-Credentials"] = "true"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type, sub"
+    return response
+
+
 ### Error Handlers ###
 @auth.errorhandler(MethodNotAllowed)
 def methodNotAllowed(e : MethodNotAllowed):
