@@ -2,15 +2,29 @@
 {% block title %} Babel | {{form_type}} {% endblock %}
 
 {% block depends %}
+    <link rel="stylesheet" type="text/css" href="{{url_for('static', filename='styles/auth.css')}}">
 {% endblock %}
 
 {% block content %}
+    <div class="about-section">
+        <h1>Welcome to Babel</h1>
+        <p>Babel is your one-stop solution for seamless translation and transcription services. Built with passion, it
+            serves as a resource server to practice and demonstrate JWT authentication, ensuring secure and efficient
+            operations.</p>
+    </div>
+
     <section class="wrapper" id="wrappper">
         <form id="auth-form" class="auth-form">
-            <input type="text" class="text-input" id="email_id" placeholder="Enter email address" name="email_id">
-            <input type="password" name="password" class="text-input" id="password">
+            {% if form_type == 'login' %}
+                <input type="text" class="text-input" id="identity" placeholder="Enter username or email address" name="identity">
+                {% else %}
+                <input type="text" class="text-input" id="email_id" placeholder="Enter email address" name="email_id">
+                <input type="text" class="text-input" id="username" placeholder="Enter username" name="username">
+            {% endif %}
+
+            <input type="password" name="password" class="text-input" id="password" placeholder="Enter Password">
             {% if form_type != "login" %}
-            <input type="password" name="cpassword" class="text-input" id="cpassword">
+            <input type="password" name="cpassword" class="text-input" id="cpassword" placeholder="Confirm Password">
             {% endif %}
 
             <button class="btn" id="submission-btn" type="button">{{form_type}}</button>
