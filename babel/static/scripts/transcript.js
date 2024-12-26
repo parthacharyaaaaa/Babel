@@ -40,7 +40,8 @@ document.addEventListener("DOMContentLoaded", async function(event) {
 
             const response = await fetch("/transcript-speech", {
                 method : "POST",
-                body : audioForm
+                body : audioForm,
+                credentials : "include"
             });
 
             if(!response.ok){
