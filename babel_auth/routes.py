@@ -162,7 +162,6 @@ def deleteAccount():
 @auth.route("/reissue", methods = ["GET"])
 def reissue():
     refreshToken = request.cookies.get("refresh", request.cookies.get("Refresh"))
-    print("Old Token", refreshToken)
 
     if not refreshToken:
         e = KeyError()
@@ -187,9 +186,6 @@ def reissue():
                         value=nRefreshToken,
                         max_age=tokenManager.refreshLifetime + tokenManager.leeway,
                         httponly=True)
-    
-    print("New Token: ", nRefreshToken)
-
     return response, 201
 
 @auth.route("/purge-family", methods = ["GET"])
