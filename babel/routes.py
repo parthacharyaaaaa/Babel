@@ -13,8 +13,10 @@ from sqlalchemy.exc import IntegrityError, DataError, StatementError, SQLAlchemy
 from auxillary_packages.decorators import *
 import requests
 import orjson
+from typing import Any
 
 LANG_CACHE = None
+FILTER_PREFERENCES = {0 : "all", 1 : "translate", 2 : "transcribe"}
 
 ### Error Handlers ###
 @app.errorhandler(MethodNotAllowed)
@@ -167,14 +169,21 @@ def delete_account():
 @token_required
 def fetch_history():
     username : str = g.decodedToken.get("sub", None)
+    try:
+        filterPreference : int = int(request.args.get("filter", 0))
+    except:
+        filterPreference = 0
+    try:
+        sortPreference : int = int(request.args.get("sort", 0))
+    except:
+        sortPreference = 0
 
-    viewPreference : str = request.args.get("preference", "all")
     try:
         currentPage : int = int(request.args.get("page", 1))
     except ValueError:
         raise BadRequest(f"POST /{request.path[1:]} Requires an integer to indicate value result")
     
-    cached_result = RedisManager.get(f"u_hist:{username}:{viewPreference}")
+    cached_result = RedisManager.get(f"uh:{username}:{filterPreference}_{sortPreference}")
     if cached_result:
         return jsonify({"result" : orjson.loads(cached_result)})
 
@@ -197,15 +206,17 @@ def fetch_history():
                               ).where(Translation_Request.requested_by == username))
 
     combinedQuery = (transcriptionQuery.union_all(translationQuery)
-                    .order_by(db.desc("time_requested"))
+                    .order_by(db.desc("time_requested") if sortPreference == 0 else db.asc("time_requested"))
                     .limit(perPage)
                     .offset((currentPage - 1) * perPage))
+    print(str(combinedQuery))
+
     
     try:
-        if viewPreference == "transcription":
-            qResult = db.session.execute(transcriptionQuery.order_by(Transcription_Request.time_requested.desc()).limit(perPage).offset((currentPage -1) * perPage))
-        elif viewPreference == "translation":
-            qResult = db.session.execute(translationQuery.order_by(Translation_Request.time_requested.desc()).limit(perPage).offset((currentPage -1) * perPage))
+        if filterPreference == 2:
+            qResult = db.session.execute(transcriptionQuery.order_by(Transcription_Request.time_requested.desc() if sortPreference == 0 else Transcription_Request.time_requested.asc()).limit(perPage).offset((currentPage -1) * perPage))
+        elif filterPreference == 1:
+            qResult = db.session.execute(translationQuery.order_by(Translation_Request.time_requested.desc() if sortPreference == 0 else Translation_Request.time_requested.asc()).limit(perPage).offset((currentPage -1) * perPage))
         else:
             qResult = db.session.execute(combinedQuery)
     except (IntegrityError, DataError) as e:
@@ -219,7 +230,7 @@ def fetch_history():
     pyReadableResult : list = [row._asdict() for row in qResult]
 
     if currentPage <= 3:
-        RedisManager.setex(f"u_hist:{username}:{viewPreference}", 120, orjson.dumps(pyReadableResult))
+        RedisManager.setex(f"uh:{username}:{filterPreference}_{sortPreference}", 120, orjson.dumps(pyReadableResult))
     return jsonify({"result" : pyReadableResult}), 200
 
 @app.route("/transcript-speech", methods = ["POST"])
