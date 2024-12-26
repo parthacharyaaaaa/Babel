@@ -1,0 +1,94 @@
+.wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+}
+
+.auth-form {
+    background-color: #00264d; /* Darker navy */
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+    width: 100%;
+    max-width: 400px;
+}
+
+.text-input {
+    width: 100%;
+    padding: 10px;
+    margin: 15px 0;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    background-color: #f0f8ff; /* Light background for inputs */
+    color: #001f3f; /* Navy blue text */
+}
+
+.text-input:focus {
+    outline: none;
+    box-shadow: 0 0 5px #1e90ff; /* Bright blue focus */
+}
+
+.btn {
+    background-color: #0061c2; /* Bright blue */
+    color: #ffffff;
+    padding: 10px 15px;
+    font-size: 18px;
+    font-weight: bold;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    width: 100%;
+    transition: background-color 0.3s ease;
+}
+
+.btn:hover {
+    background-color: #005197; /* Darker blue on hover */
+}
+
+#wrappper {
+    margin-top: 20px;
+}
+
+/* About Section */
+.about-section {
+    background-color: #002b5c; /* Navy tone for contrast */
+    padding: 40px;
+    border-radius: 10px;
+    margin: 20px auto;
+    max-width: 800px;
+    text-align: center;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.about-section h1 {
+    font-size: 36px;
+    margin-bottom: 20px;
+    color: #1e90ff; /* Bright accent */
+}
+
+.about-section p {
+    font-size: 18px;
+    line-height: 1.6;
+    color: #f0f8ff;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .auth-form {
+        width: 90%;
+    }
+
+    .about-section {
+        padding: 20px;
+    }
+
+    .about-section h1 {
+        font-size: 28px;
+    }
+
+    .about-section p {
+        font-size: 16px;
+    }
+}
