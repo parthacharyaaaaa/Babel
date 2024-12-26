@@ -330,7 +330,7 @@ def translate_text():
         src_language : str = translation_request.get("src", None)
         src_language = None if src_language.strip() == "" else src_language.lower()
 
-        cached_result = RedisManager.get(zlib.adler32(f"{g.decodedToken['sub']}:{src_language}-{dest_language}-{original_text}".encode()))
+        cached_result = RedisManager.get("TL:" + str(zlib.adler32(f"{g.decodedToken['sub']}:{src_language}-{dest_language}-{original_text}".encode())))
         if cached_result:
             return jsonify(orjson.dumps(cached_result)), 200
 
@@ -369,7 +369,7 @@ def translate_text():
             abort(500)
 
 
-        RedisManager.setex(zlib.adler32(f"{g.decodedToken['sub']}:{src_language}-{dest_language}-{original_text}".encode()),
+        RedisManager.setex("TL:" + str(zlib.adler32(f"{g.decodedToken['sub']}:{src_language}-{dest_language}-{original_text}".encode())),
                            120,
                            orjson.dumps({"translated-text" : translated_text, "src" : translation_src, "time" : time_taken}))
         return jsonify({"translated-text" : translated_text, "src" : translation_src, "time" : time_taken}), 200
