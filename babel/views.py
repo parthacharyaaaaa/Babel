@@ -46,7 +46,6 @@ def dashboard():
                                 key = os.environ["SIGNING_KEY"],
                                 algorithms=["HS256"],
                                 leeway=timedelta(minutes=3))
-        isOwner = dTkn["sub"] == user.username
 
     return render_template("dashboard.html",
                             username = username,
@@ -55,4 +54,4 @@ def dashboard():
                             transcriptions = user.transcriptions,
                             translations = user.translations,
                             email_id = user.email_id,
-                            owner = isOwner)
+                            owner = dTkn["sub"] == user.username)
