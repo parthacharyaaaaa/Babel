@@ -13,9 +13,7 @@ document.addEventListener("DOMContentLoaded", async function (event) {
             throw new Error(`Failed to fetch available languages from server. Status: ${statusCode} ${statusText}`);
         }
 
-        const data = await response.json();
-        const available_languages = data["lang"];
-        console.log(available_languages)
+        const available_languages = await response.json();
         let languages_lists = document.querySelectorAll(".language-list");
 
         languages_lists.forEach(languages_list => {
