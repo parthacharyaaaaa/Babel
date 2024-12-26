@@ -16,7 +16,7 @@ class Flask_Config:
         PORT = os.environ["PORT"]
         HOST = os.environ["HOST"]
         PERMANENT_SESSION_LIFETIME = timedelta(days=int(os.environ["SESSION_LIFETIME"]))
-        UPLOAD_FOLDER = os.path.join(CWD, os.environ["UPLOAD_FOLDER"])
+        UPLOAD_FOLDER = os.environ["UPLOAD_FOLDER"]
         MAX_CONTENT_LENGTH = int(os.environ["MAX_CONTENT_LENGTH"])
         ERROR_LOG_FILE = os.path.join(CWD, os.environ["ERROR_LOG_FILE"])
 
