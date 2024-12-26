@@ -1,5 +1,5 @@
 from jwt import decode, PyJWTError, ExpiredSignatureError
-from flask import request, g
+from flask import request, g, make_response
 import os
 from werkzeug.exceptions import Unauthorized, BadRequest
 from datetime import timedelta
@@ -46,10 +46,34 @@ def enforce_mimetype(mimetype : str):
     def inner_dec(endpoint):
         @functools.wraps(endpoint)
         def decorated(*args, **kwargs):
-            if request.mimetype.split("/")[-1] != mimetype.lower():
+            if not request.mimetype or request.mimetype.split("/")[-1] != mimetype.lower():
                 e = BadRequest(f"Invalid mimetype forwarded to {request.method.upper()} /{request.root_path}")
                 e.__setattr__("_additional_info", f"Expected mimetype: {mimetype}, received {request.mimetype} instead")
                 raise e
             return endpoint(*args, **kwargs)
         return decorated
     return inner_dec
+
+def attach_CORS_headers(endpoint):
+    @functools.wraps(endpoint)
+    def decorated(*args, **kwargs):
+        try:
+            if request.method == "OPTIONS":
+                print("Options")
+                response = make_response()  # Create a response for OPTIONS
+                response.headers["Access-Control-Allow-Origin"] = "http://192.168.0.105:5000"
+                response.headers["Access-Control-Allow-Credentials"] = "true"
+                response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS, DELETE, PUT"
+                response.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type, sub, X-CSRF-TOKEN"
+                return response  # Return the OPTIONS response immediately
+
+            result = endpoint(*args, **kwargs)
+            response = result[0]
+            response.headers["Access-Control-Allow-Origin"] = "http://192.168.0.105:5000"
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+            response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS, DELETE, PUT"
+            response.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type, sub, X-CSRF-TOKEN"
+            return response, result[1]
+        except Exception as e:
+            raise e
+    return decorated
