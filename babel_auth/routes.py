@@ -193,9 +193,13 @@ def purgeFamily():
     '''
     Purges an entire token family in case of a reuse attack or a normal client logout
     '''
-    tkn = tokenManager.decodeToken(request.headers.get("Refresh", request.headers.get("refresh")),
-                                        tType="refresh",
-                                        options={"verify_nbf" : False})
+    tkn = request.cookies.get("Refresh", request.cookies.get("refresh"))
+    if not tkn:
+        raise BadRequest(f"Logout requires a refresh token to be provided")
+    
+    tkn = tokenManager.decodeToken(tkn,
+                                   tType="refresh",
+                                   options={"verify_nbf" : False})
     if not tkn:
         raise BadRequest(f"Invalid Refresh Token provided to [{request.method}] {request.url_rule}")
     tokenManager.invalidateFamily(tkn['fid'])
