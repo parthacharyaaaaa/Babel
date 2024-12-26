@@ -209,8 +209,6 @@ def fetch_history():
                     .order_by(db.desc("time_requested") if sortPreference == 0 else db.asc("time_requested"))
                     .limit(perPage)
                     .offset((currentPage - 1) * perPage))
-    print(str(combinedQuery))
-
     
     try:
         if filterPreference == 2:
