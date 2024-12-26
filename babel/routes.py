@@ -14,8 +14,8 @@ from auxillary_packages.decorators import *
 import jwt
 import requests
 import orjson
+import zlib
 import traceback
-
 LANG_CACHE = None
 FILTER_PREFERENCES = {0 : "all", 1 : "translate", 2 : "transcribe"}
 
@@ -60,6 +60,7 @@ def discrete_db_err(e : DISCRETE_DB_ERROR):
 def internalServerError(e : Exception):
     ErrorLogger.addEntryToQueue(e)
     print(e.__class__)
+    print(traceback.format_exc())
     return jsonify({"message" : getattr(e, "description", "An Error Occured"), "Additional Info" : getattr(e, "_additional_info", "There seems to be an issue with our service, please retry after some time or contact support")}), 500
 
 ### Endpoints ###
@@ -194,10 +195,11 @@ def delete_account():
                                algorithms=["HS256"],
                                leeway=timedelta(minutes=3),
                                options={"verify_nbf" : False})
+    
     password : str = request.get_json(force=True)["password"]
-    print("reached")
     if not password:
         raise BadRequest(f"POST /{request.path[1:]} Password missing")
+    
     try:
         uPass = db.session.execute(select(User.password).where(User.username == g.decodedToken["sub"])).scalar_one_or_none()
         if not bcrypt.check_password_hash(uPass, password):
@@ -328,6 +330,10 @@ def translate_text():
         src_language : str = translation_request.get("src", None)
         src_language = None if src_language.strip() == "" else src_language.lower()
 
+        cached_result = RedisManager.get(zlib.adler32(f"{g.decodedToken['sub']}:{src_language}-{dest_language}-{original_text}".encode()))
+        if cached_result:
+            return jsonify(orjson.dumps(cached_result)), 200
+
         #Validating strings
         if original_text.strip() == "" or dest_language.strip() == "":
             raise ValueError()
@@ -361,6 +367,11 @@ def translate_text():
         except (IntegrityError, DataError, StatementError):
             db.session.rollback()
             abort(500)
+
+
+        RedisManager.setex(zlib.adler32(f"{g.decodedToken['sub']}:{src_language}-{dest_language}-{original_text}".encode()),
+                           120,
+                           orjson.dumps({"translated-text" : translated_text, "src" : translation_src, "time" : time_taken}))
         return jsonify({"translated-text" : translated_text, "src" : translation_src, "time" : time_taken}), 200
 
     except BadRequest as e:
