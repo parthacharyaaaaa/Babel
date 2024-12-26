@@ -103,7 +103,13 @@ def login():
     response.set_cookie(key="refresh",
                         value=rToken,
                         max_age=tokenManager.refreshLifetime + tokenManager.leeway,
-                        httponly=True)
+                        httponly=True,
+                        path="/reissue")
+    response.set_cookie(key="refresh",
+                    value=rToken,
+                    max_age=tokenManager.refreshLifetime + tokenManager.leeway,
+                    httponly=True,
+                    path="/delete-account")
     return response, 201
 
 @auth.route("/register", methods = ["POST"])
@@ -151,13 +157,20 @@ def register():
                         max_age=tokenManager.refreshLifetime + tokenManager.leeway,
                         httponly=True,
                         path="/reissue")
+    response.set_cookie(key="refresh",
+                        value=rToken,
+                        max_age=tokenManager.refreshLifetime + tokenManager.leeway,
+                        httponly=True,
+                        path="/delete-account")
 
     return response, 201
 
 @auth.route("/delete-account", methods = ["DELETE"])
 @private
 def deleteAccount():
-    tokenManager.invalidateFamily(request.headers["fid"])
+    tokenManager.invalidateFamily(request.headers["refreshID"])
+    return jsonify({"message" : "resource deleted successfully"}), 204
+
 
 @auth.route("/reissue", methods = ["GET"])
 def reissue():
@@ -185,7 +198,13 @@ def reissue():
     response.set_cookie(key="refresh",
                         value=nRefreshToken,
                         max_age=tokenManager.refreshLifetime + tokenManager.leeway,
-                        httponly=True)
+                        httponly=True,
+                        path="/reissue")
+    response.set_cookie(key="refresh",
+                    value=nRefreshToken,
+                    max_age=tokenManager.refreshLifetime + tokenManager.leeway,
+                    httponly=True,
+                    path="/delete-account")
     return response, 201
 
 @auth.route("/purge-family", methods = ["GET"])
