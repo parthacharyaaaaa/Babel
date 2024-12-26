@@ -109,9 +109,6 @@ def login():
 @auth.route("/register", methods = ["POST"])
 @enforce_mimetype("json")
 def register():
-    if not request.is_json:
-        raise BadRequest(f"Only JSON mimetype accepted by POST /{request.root_path}")
-    
     registrationDetails : dict = request.get_json(force=True, silent=False)
     
     if not ("username" in registrationDetails and
