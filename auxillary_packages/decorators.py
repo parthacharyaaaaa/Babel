@@ -59,21 +59,26 @@ def attach_CORS_headers(endpoint):
     def decorated(*args, **kwargs):
         try:
             if request.method == "OPTIONS":
-                print("Options")
-                response = make_response()  # Create a response for OPTIONS
+                response = make_response()
                 response.headers["Access-Control-Allow-Origin"] = "http://192.168.0.105:5000"
                 response.headers["Access-Control-Allow-Credentials"] = "true"
                 response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS, DELETE, PUT"
                 response.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type, sub, X-CSRF-TOKEN"
-                return response  # Return the OPTIONS response immediately
+                return response, 204
 
             result = endpoint(*args, **kwargs)
-            response = result[0]
+            if isinstance(result, tuple):
+                response = result[0]
+                code = result[1]
+            else:
+                response = result
+                code = 200
             response.headers["Access-Control-Allow-Origin"] = "http://192.168.0.105:5000"
             response.headers["Access-Control-Allow-Credentials"] = "true"
             response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS, DELETE, PUT"
             response.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type, sub, X-CSRF-TOKEN"
-            return response, result[1]
+            return response, code
         except Exception as e:
+            print(e.__class__)
             raise e
     return decorated
