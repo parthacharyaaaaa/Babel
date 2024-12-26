@@ -1,14 +1,15 @@
 async function checkExpiry(){
     try{
+        console.log("called")
         const exp = localStorage.getItem("access_exp");
         const leeway = localStorage.getItem("leeway") !== null ? localStorage.getItem("leeway") : 0;
         const currentTime = Math.floor(Date.now() / 1000);
-        if (exp != null && exp < currentTime - 120 - leeway){
+        console.log(exp)
+        console.log(currentTime)
+        if (exp != null && exp < currentTime + leeway/3){
             reauth();
-        }
-        else{
-            setTimeout(() => checkExpiry(), 60000)
-        }
+        }    
+        setTimeout(() => checkExpiry(), 60000)
     }
     catch(error){
         console.log("Error: " + error)
@@ -17,6 +18,7 @@ async function checkExpiry(){
 
 async function reauth(){
     try{
+        console.log("Reauth Started")
         const response = await fetch("http://192.168.0.105:8080/reissue", {
                 method : "GET",
                 headers : {
@@ -35,9 +37,6 @@ async function reauth(){
         }
 
         const result = await response.json();
-        if(aToken != result.expCredential){
-            throw new Error("Authentication failed, please login again");
-        }
 
         localStorage.setItem("access_exp", result.access_exp);
         localStorage.setItem("leeway", result.leeway !== undefined ? result.leeway : 0);
@@ -46,3 +45,5 @@ async function reauth(){
         throw error;
     }
 }
+
+checkExpiry()
