@@ -29,6 +29,9 @@
         {% endif %}
     </section>
 </div>
-<script type="text/javascript" src = "{{url_for('static', filename = 'scripts/logout.js')}}"></script>
-<script type="text/javascript" src = "{{url_for('static', filename = 'scripts/deleteAcc.js')}}"></script>
+<section class="user-actions">
+{% if owner %}
+    <script type="text/javascript" src = "{{url_for('static', filename = 'scripts/logout.js')}}"></script>
+    <script type="text/javascript" src = "{{url_for('static', filename = 'scripts/deleteAcc.js')}}"></script>
+{% endif %}
 {% endblock %}
