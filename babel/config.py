@@ -20,6 +20,8 @@ class Flask_Config:
         MAX_CONTENT_LENGTH = int(os.environ["MAX_CONTENT_LENGTH"])
         ERROR_LOG_FILE = os.path.join(CWD, os.environ["ERROR_LOG_FILE"])
 
+        CSP_STRING = os.environ["CSP_STRING"]
+
         # Auth Server Communication Metadata
         AUTH_SERVER_ORIGIN = os.environ["AUTH_SERVER_ADDRESS"]
         AUTH_COMMUNICATION_PROTOCOL = os.environ.get("AUTH_SERVER_COMMUNICATION_PROTOCOL", "http")

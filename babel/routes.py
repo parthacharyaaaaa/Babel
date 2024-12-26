@@ -19,6 +19,12 @@ import traceback
 LANG_CACHE = None
 FILTER_PREFERENCES = {0 : "all", 1 : "translate", 2 : "transcribe"}
 
+@app.after_request
+def afterRequest(response):
+    print(app.config["CSP_STRING"] + f" content-src: 'self' {os.environ['AUTH_SERVER_ADDRESS']};")
+    response.headers["Content-Security-Policy"] = app.config["CSP_STRING"] + f" connect-src 'self' {os.environ['AUTH_SERVER_ADDRESS']};"
+    return response
+
 ### Error Handlers ###
 @app.errorhandler(MethodNotAllowed)
 def methodNotAllowed(e : MethodNotAllowed):

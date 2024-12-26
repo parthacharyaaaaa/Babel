@@ -9,6 +9,10 @@ import jwt.exceptions as JWT_exc
 import time
 import traceback
 
+@auth.after_request
+def enforceMinCSP(response):
+    response.headers["Content-Security-Policy"] = f"default-src 'self'; connect-src 'self' {os.environ['RS_DOMAIN']}"
+
 ### Error Handlers ###
 @auth.errorhandler(MethodNotAllowed)
 def methodNotAllowed(e : MethodNotAllowed):
@@ -106,7 +110,7 @@ def login():
                     path="/purge-family")
     return response, 201
 
-@auth.route("/register", methods = ["POST"])
+@auth.route("/register", methods = ["POST", "OPTIONS"])
 @attach_CORS_headers
 @enforce_mimetype("json")
 def register():
