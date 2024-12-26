@@ -11,6 +11,8 @@ async function getHistory(sortOption, filterOption, pageNumber = 1) {
         if (!response.ok) {
             throw new Error(`${response.status}: ${response.statusText}. Failed to fetch history`);
         }
+        isExhausted = response.headers.get("exhausted");
+        
         results = await response.json();
         const parent = document.querySelector(".history-list");
 
@@ -48,7 +50,11 @@ async function getHistory(sortOption, filterOption, pageNumber = 1) {
             entry.appendChild(id);
 
             parent.appendChild(entry);
+
         })
+        if(isExhausted){
+            document.getElementById("load-more").remove();
+        }
     }
     catch (error) {
         console.error(error);

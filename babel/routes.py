@@ -187,7 +187,7 @@ def fetch_history():
     if cached_result:
         return jsonify(orjson.loads(cached_result))
 
-    perPage : int = 10
+    perPage : int = 10 + 1
 
     transcriptionQuery =(select(Transcription_Request.id,
                                 Transcription_Request.time_requested.label("time_requested"),
@@ -211,7 +211,6 @@ def fetch_history():
                     .order_by(db.desc("time_requested") if sortPreference == 0 else db.asc("time_requested"))
                     .limit(perPage)
                     .offset((currentPage - 1) * perPage))
-    
     try:
         if filterPreference == 2:
             qResult = db.session.execute(transcriptionQuery.order_by(Transcription_Request.time_requested.desc() if sortPreference == 0 else Transcription_Request.time_requested.asc()).limit(perPage).offset((currentPage -1) * perPage))
@@ -226,12 +225,16 @@ def fetch_history():
         raise e
     except Exception as e:
         raise DISCRETE_DB_ERROR()
-    
+
     pyReadableResult : list = [row._asdict() for row in qResult]
 
     if currentPage <= 3:
         RedisManager.setex(f"uh:{username}:{filterPreference}_{sortPreference}_{currentPage}", 120, orjson.dumps(pyReadableResult))
-    return jsonify(pyReadableResult), 200
+
+    resposne = jsonify(pyReadableResult[:-1])
+    if len(pyReadableResult) < perPage:
+        resposne.headers["exhausted"] = True
+    return resposne, 200
 
 @app.route("/transcript-speech", methods = ["POST"])
 @enforce_mimetype("form-data")
