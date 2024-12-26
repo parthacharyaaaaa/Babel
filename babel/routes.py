@@ -11,6 +11,7 @@ from sqlalchemy import select, insert, update, delete
 from sqlalchemy.sql import literal
 from sqlalchemy.exc import IntegrityError, DataError, StatementError, SQLAlchemyError, CompileError
 from auxillary_packages.decorators import *
+import jwt
 import requests
 import orjson
 import traceback
@@ -58,6 +59,7 @@ def discrete_db_err(e : DISCRETE_DB_ERROR):
 @app.errorhandler(InternalServerError)
 def internalServerError(e : Exception):
     ErrorLogger.addEntryToQueue(e)
+    print(e.__class__)
     return jsonify({"message" : getattr(e, "description", "An Error Occured"), "Additional Info" : getattr(e, "_additional_info", "There seems to be an issue with our service, please retry after some time or contact support")}), 500
 
 ### Endpoints ###
@@ -131,8 +133,6 @@ def register():
                                                 translations = 0))
         db.session.commit()
     except (IntegrityError, DataError, StatementError) as e:
-        print(e.__class__)
-        print(traceback.format_exc())
         db.session.rollback()
         abort(500)
     
@@ -188,7 +188,14 @@ def delete_account():
     rToken = request.cookies.get("refresh", request.cookies.get("Refresh"))
     if not rToken:
         raise BadRequest(f"POST /{request.path[1:]} requires a refresh token to allow account deletion. Please reauthenticate yourself and then repeat the deletion process. If this issue persists, contact support")
+    
+    decodedRToken = jwt.decode(rToken,
+                               key=os.environ["SIGNING_KEY"],
+                               algorithms=["HS256"],
+                               leeway=timedelta(minutes=3),
+                               options={"verify_nbf" : False})
     password : str = request.get_json(force=True)["password"]
+    print("reached")
     if not password:
         raise BadRequest(f"POST /{request.path[1:]} Password missing")
     try:
@@ -205,7 +212,7 @@ def delete_account():
         abort(500)
 
     requests.delete(url=f"{app.config['AUTH_COMMUNICATION_PROTOCOL']}://{app.config['AUTH_SERVER_ORIGIN']}/delete-account",
-                headers={"refreshID" : g.decodedToken["fid"], "AUTH-API-KEY" : os.environ["AUTH_API_KEY"]})
+                headers={"refreshID" : decodedRToken["fid"], "AUTH-API-KEY" : os.environ["AUTH_API_KEY"]})
     return jsonify({"message" : "Account Deleted Successfully"}), 204
 
 @app.route("/fetch-history", methods = ["GET"])
