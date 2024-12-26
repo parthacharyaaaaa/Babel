@@ -40,7 +40,7 @@ document.addEventListener("DOMContentLoaded", function (event) {
                 localStorage.setItem("access_exp", data.access_exp);
                 localStorage.setItem("leeway", data.leeway !== undefined ? data.leeway : 0);
 
-                window.location.href = window.location.host;
+                window.location.href = "/";
             }
             catch(error){
                 console.error("Submission Error: ", error)
