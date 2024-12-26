@@ -1,23 +1,13 @@
 from babel_auth import auth, tokenManager
-from auxillary_packages.decorators import enforce_mimetype, private
+from auxillary_packages.decorators import enforce_mimetype, private, attach_CORS_headers
 from auxillary_packages.errors import TOKEN_STORE_INTEGRITY_ERROR
-from flask import request, abort, jsonify, Response
+from flask import request, make_response, jsonify, Response
 from werkzeug.exceptions import BadRequest, MethodNotAllowed, NotFound, Unauthorized, Forbidden, InternalServerError, HTTPException
 import requests
 import os
 import jwt.exceptions as JWT_exc
 import time
 import traceback
-
-### CORS ###
-@auth.after_request
-def add_cors_headers(response):
-    response.headers["Access-Control-Allow-Origin"] = "http://192.168.0.105:5000"
-    response.headers["Access-Control-Allow-Credentials"] = "true"
-    response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
-    response.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type, sub"
-    return response
-
 
 ### Error Handlers ###
 @auth.errorhandler(MethodNotAllowed)
@@ -66,11 +56,10 @@ def internalServerError(e : Exception):
 
 ### Endpoints ###
 
-@auth.route("/login", methods = ["POST"])
+@auth.route("/login", methods = ["POST", "OPTIONS"])
+@attach_CORS_headers
 @enforce_mimetype("json")
 def login():
-    if not request.is_json:
-        raise BadRequest(f"POST /{request.root_path} accepts only JSON requests")
     authentication_data = request.get_json(force=True, silent=False)
     if not ("identity" in authentication_data and "password" in authentication_data):
         raise BadRequest(f"POST /{request.root_path} expects identity and password in HTTP body")
@@ -110,9 +99,15 @@ def login():
                     max_age=tokenManager.refreshLifetime + tokenManager.leeway,
                     httponly=True,
                     path="/delete-account")
+    response.set_cookie(key="refresh",
+                    value=rToken,
+                    max_age=tokenManager.refreshLifetime + tokenManager.leeway,
+                    httponly=True,
+                    path="/purge-family")
     return response, 201
 
 @auth.route("/register", methods = ["POST"])
+@attach_CORS_headers
 @enforce_mimetype("json")
 def register():
     registrationDetails : dict = request.get_json(force=True, silent=False)
@@ -162,6 +157,11 @@ def register():
                         max_age=tokenManager.refreshLifetime + tokenManager.leeway,
                         httponly=True,
                         path="/delete-account")
+    response.set_cookie(key="refresh",
+                    value=rToken,
+                    max_age=tokenManager.refreshLifetime + tokenManager.leeway,
+                    httponly=True,
+                    path="/purge-family")
 
     return response, 201
 
@@ -173,6 +173,7 @@ def deleteAccount():
 
 
 @auth.route("/reissue", methods = ["GET"])
+@attach_CORS_headers
 def reissue():
     refreshToken = request.cookies.get("refresh", request.cookies.get("Refresh"))
 
@@ -205,9 +206,15 @@ def reissue():
                     max_age=tokenManager.refreshLifetime + tokenManager.leeway,
                     httponly=True,
                     path="/delete-account")
+    response.set_cookie(key="refresh",
+                    value=nRefreshToken,
+                    max_age=tokenManager.refreshLifetime + tokenManager.leeway,
+                    httponly=True,
+                    path="/purge-family")
     return response, 201
 
-@auth.route("/purge-family", methods = ["GET"])
+@auth.route("/purge-family", methods = ["GET", "OPTIONS"])
+@attach_CORS_headers
 def purgeFamily():
     '''
     Purges an entire token family in case of a reuse attack or a normal client logout
@@ -224,7 +231,6 @@ def purgeFamily():
     tokenManager.invalidateFamily(tkn['fid'])
     response : Response = jsonify({"message" : "Token Revoked"})
     response.headers["iss"] = "babel-auth-service"
-
     return response, 204
 
 @auth.route("/ip-blacklist", methods = ["POST"])
