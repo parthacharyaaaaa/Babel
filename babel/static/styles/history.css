@@ -1,0 +1,65 @@
+.history-section {
+    padding: 2rem;
+    background-color: var(--SECONDARY-BG);
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.history-section h1 {
+    font-size: var(--FSIZE-XL);
+    margin-bottom: 1rem;
+}
+
+.filters {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.filters label {
+    font-size: var(--FSIZE);
+    color: var(--PRIMARY-TEXT-COLOR);
+}
+
+.filters select {
+    padding: 0.5rem;
+    font-size: var(--FSIZE);
+    border: 1px solid var(--BORDER-COLOR);
+    border-radius: 4px;
+    background-color: var(--PRIMARY-BG);
+    color: var(--PRIMARY-TEXT-COLOR);
+}
+
+.history-list {
+    list-style: none;
+    padding: 0;
+}
+
+.history-item {
+    background-color: var(--PRIMARY-BG);
+    margin-bottom: 1rem;
+    padding: 1rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+}
+
+.history-item .history-date {
+    font-weight: bold;
+    font-size: var(--FSIZE-L);
+    color: var(--SECONDARY-TEXT-COLOR);
+}
+
+.history-item .history-type {
+    font-size: var(--FSIZE);
+    color: var(--TERTIARY-TEXT-COLOR);
+    margin-top: 0.5rem;
+}
+
+.history-item .history-description {
+    font-size: var(--FSIZE);
+    margin-top: 1rem;
+    color: var(--PRIMARY-TEXT-COLOR);
+}
