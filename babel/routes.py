@@ -4,16 +4,16 @@ from babel import app, db, bcrypt, RedisManager, ErrorLogger
 from babel.models import *
 from babel.config import *
 from auxillary_packages.errors import *
-from werkzeug.exceptions import Unauthorized, FailedDependency, InternalServerError, HTTPException, Forbidden, NotFound, MethodNotAllowed
+from werkzeug.exceptions import Unauthorized, InternalServerError, HTTPException, Forbidden, NotFound, MethodNotAllowed
 from babel.transciber import getAudioTranscription
 from googletrans import Translator
 from sqlalchemy import select, insert, update
 from sqlalchemy.sql import literal
-from sqlalchemy.exc import IntegrityError, DataError, StatementError, SQLAlchemyError
+from sqlalchemy.exc import IntegrityError, DataError, StatementError, SQLAlchemyError, CompileError
 from auxillary_packages.decorators import *
 import requests
 import orjson
-from typing import Any
+import traceback
 
 LANG_CACHE = None
 FILTER_PREFERENCES = {0 : "all", 1 : "translate", 2 : "transcribe"}
@@ -191,7 +191,7 @@ def fetch_history():
 
     transcriptionQuery =(select(Transcription_Request.id,
                                 Transcription_Request.time_requested.label("time_requested"),
-                                Transcription_Request.transcipted_text.label("content"),
+                                Transcription_Request.transcripted_text.label("content"),
                                 Transcription_Request.language.label("lang"),
                                 literal("transcription").label("type"),
                                 literal(None).label("src"),
@@ -242,30 +242,25 @@ def transcript_speech():
         raise BadRequest("Audio File Not Found in Request Object\nAt:POST /transcript-speech")
     
     starting_time = time.time()
-    #Add file validation logic here
     #Saving file
     filepath : str = os.path.join(app.config["UPLOAD_FOLDER"], audio_file.filename)
     audio_file.save(filepath)
 
-    #Transcripting audio
-    print(filepath)
     result = getAudioTranscription(filepath)
     time_taken = starting_time - time.time()
-
     try:
         db.session.execute(insert(Transcription_Request)
                            .values(requested_by=g.decodedToken["sub"],
                                    language="en",
                                    transcripted_text=result["text"],
-                                   time_requested=starting_time))
+                                   time_requested=datetime.fromtimestamp(starting_time)))
         db.session.execute(update(User)
                            .where(User.id == g.decodedToken["sub"])
                            .values(transcriptions=User.transcriptions + 1))
         db.session.commit()
-    except (IntegrityError, DataError, ValueError):
+    except (IntegrityError, DataError, ValueError, CompileError):
         db.session.rollback()
         abort(500)
-    
     return jsonify({"text" : result["text"], "confidence" : result["confidence"], "time" : time_taken}), 200
 
 @app.route("/translate-text", methods = ["POST"])
