@@ -1,8 +1,33 @@
 {% extends 'base.html' %}
-{% block title %} Babel | Dashboard {% endblock %}
+{% block title %} Babel | {{username}} {% endblock %}
 
 {% block depends %}
+<link rel="stylesheet" href="{{ url_for('static', filename='styles/dashboard.css') }}">
 {% endblock %}
 
 {% block content %}
+<div class="dashboard-container">
+    <header class="dashboard-header">
+        <h1>{{ username }}'s Babel profile</h1>
+    </header>
+    
+    <section class="user-info">
+        <h2>Account Information</h2>
+        <ul>
+            <li><strong>Email:</strong> {{ email_id }}</li>
+            <li><strong>Account Created:</strong> {{ time_created }}</li>
+            <li><strong>Last Login:</strong> {{ last_login }}</li>
+            <li><strong>Total Transcriptions:</strong> {{ transcriptions }}</li>
+            <li><strong>Total Translations:</strong> {{ translations }}</li>
+        </ul>
+    </section>
+    
+    <section class="user-actions">
+        {% if owner %}
+            <button id="logout-btn" class="action-btn">Logout</button>
+            <button id="delete-btn" class="action-btn delete-btn">Delete Account</button>
+        {% endif %}
+    </section>
+</div>
+<script type="text/javascript" src = "{{url_for('static', filename = 'scripts/logout.js')}}"></script>
 {% endblock %}
