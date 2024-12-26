@@ -1,8 +1,49 @@
 {% extends 'base.html' %}
+
 {% block title %} Babel | History {% endblock %}
 
 {% block depends %}
+<link rel="stylesheet" type="text/css" href="{{url_for('static', filename='styles/history.css')}}">
 {% endblock %}
 
 {% block content %}
+<main>
+    <section class="history-section">
+        <h1>Your History</h1>
+
+        <!-- Filters Section -->
+        <div class="filters">
+            <label for="filter">Filter:</label>
+            <select id="filter" name="filter" class="selection">
+                <option value="0">All</option>
+                <option value="1">Translations</option>
+                <option value="2">Transcriptions</option>
+            </select>
+
+            <label for="sort">Sort by:</label>
+            <select id="sort" name="sort" class="selection">
+                <option value="0">Descending</option>
+                <option value="1">Ascending</option>
+            </select>
+        </div>
+
+        <!-- History List -->
+        <ul class="history-list">
+            <!-- Example item, loop through actual data in your backend -->
+            <li class="history-item">
+                <span class="history-date">2024-12-01</span>
+                <span class="history-id">Translation</span>
+                <span class="history-contents">Translated document about backend development.</span>
+            </li>
+            <li class="history-item">
+                <span class="history-date">2024-11-25</span>
+                <span class="history-type">Transcription</span>
+                <span class="history-description">Transcribed meeting on project progress.</span>
+            </li>
+            <!-- More items can be added dynamically -->
+        </ul>
+        <button class="submit-btn">Load More</button>
+    </section>
+</main>
+<script type="text/javascript" src="{{url_for('static', filename='scripts/history.js')}}"></script>
 {% endblock %}
