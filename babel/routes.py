@@ -109,9 +109,9 @@ def validateUser():
         identity = userMetadata["identity"]
         password = userMetadata["password"]
         if "@" in identity:
-            user = db.session.execute(select(User).where(User.email_id == identity)).scalar_one_or_none()
+            user = db.session.execute(select(User).where(User.email_id == identity, User.deleted == 0)).scalar_one_or_none()
         else:
-            user = db.session.execute(select(User).where(User.username == identity)).scalar_one_or_none()
+            user = db.session.execute(select(User).where(User.username == identity, User.deleted == 0)).scalar_one_or_none()
 
         if not user:
             return jsonify({"message":"User does not exist"}), 404
