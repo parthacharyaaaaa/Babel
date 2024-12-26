@@ -79,7 +79,7 @@ class Transcription_Request(db.Model):
     id = db.Column(db.Integer, primary_key = True, nullable = False)
     requested_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable = False)
     language = db.Column(db.String(16), nullable = False, default = "Eng")
-    transcipted_text = db.Column(db.Text, nullable = False)
+    transcripted_text = db.Column(db.Text, nullable = False)
 
     #Time Metadata
     time_requested = db.Column(db.DateTime, nullable = False, index = True)
