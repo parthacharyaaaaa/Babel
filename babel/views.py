@@ -39,13 +39,14 @@ def dashboard():
     if not user:
         raise NotFound("This username is not registered with Babel. Make sure you spell it correctly, and that your queried username is actually registered. If you believe that this is your account, please contact support")
     
-    isOwner : bool = False
     tkn = request.cookies.get("access", request.cookies.get("Access"))
+    isOwner : bool = False
     if tkn:
         dTkn : str = jwt.decode(tkn,
                                 key = os.environ["SIGNING_KEY"],
                                 algorithms=["HS256"],
                                 leeway=timedelta(minutes=3))
+        isOwner = dTkn["sub"] == user.username
 
     return render_template("dashboard.html",
                             username = username,
@@ -54,4 +55,4 @@ def dashboard():
                             transcriptions = user.transcriptions,
                             translations = user.translations,
                             email_id = user.email_id,
-                            owner = dTkn["sub"] == user.username)
+                            owner = isOwner)
