@@ -1,0 +1,61 @@
+/* home.css */
+
+/* Basic container styling */
+.container {
+    width: 80%;
+    margin: 0 auto;
+    padding: 20px;
+    color: #fff;
+  }
+  
+  h1, h2 {
+    font-family: 'Arial', sans-serif;
+    color: #fff;
+  }
+  
+  p {
+    font-family: 'Georgia', serif;
+    font-size: 1.1rem;
+    line-height: 1.6;
+  }
+  
+  /* Hero Section */
+  .hero {
+    background-color: #1A237E; /* Navy Blue */
+    padding: 60px 0;
+    text-align: center;
+  }
+  
+  .hero h1 {
+    font-size: 3rem;
+    margin-bottom: 20px;
+  }
+  
+  .hero p {
+    font-size: 1.25rem;
+  }
+  
+  /* Section Styling */
+  section {
+    margin: 40px 0;
+  }
+  
+  section h2 {
+    font-size: 2rem;
+    margin-bottom: 15px;
+  }
+  
+  section p {
+    font-size: 1.1rem;
+  }
+  
+  /* Link Styling */
+  a {
+    color: #FFD54F; /* Gold accent */
+    text-decoration: none;
+  }
+  
+  a:hover {
+    text-decoration: underline;
+  }
+  
