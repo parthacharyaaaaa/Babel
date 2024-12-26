@@ -7,7 +7,7 @@ from auxillary_packages.errors import *
 from werkzeug.exceptions import Unauthorized, InternalServerError, HTTPException, Forbidden, NotFound, MethodNotAllowed
 from babel.transciber import getAudioTranscription
 from googletrans import Translator
-from sqlalchemy import select, insert, update
+from sqlalchemy import select, insert, update, delete
 from sqlalchemy.sql import literal
 from sqlalchemy.exc import IntegrityError, DataError, StatementError, SQLAlchemyError, CompileError
 from auxillary_packages.decorators import *
@@ -74,27 +74,65 @@ def register():
     except KeyError as k:
         raise BadRequest(f"POST /{request.path[1:]} Mandatory field missing")
 
-    userExists = db.session.execute(select(User).where(User.username == uname, User.deleted == 0)).first()
-    emailExists = db.session.execute(select(User).where(User.email_id == email, User.deleted == 0)).first()
+    userRecord : User = db.session.execute(select(User).where(User.username == uname)).scalar_one_or_none()
+    print(userRecord)
+    emailRecord : User = db.session.execute(select(User).where(User.email_id == email)).scalar_one_or_none()
+    print(emailRecord)
 
-    if emailExists:
+    if emailRecord and not emailRecord.deleted:
         return jsonify({"message" : "This email address is already registered, please log in or use a different email address"}), 409
 
-    if userExists:
+    if userRecord and not userRecord.deleted:
         return jsonify({"message" : "This username is already registered, please log in or use a different username"}), 409
     
     try:
-        db.session.execute(insert(User).values(username = uname,
-                                            password = bcrypt.generate_password_hash(password),
-                                            email_id = email,
-                                            time_created = datetime.now(),
-                                            last_login = datetime.now(),
-                                            deleted = False,
-                                            time_deleted = None,
-                                            transcriptions = 0,
-                                            translations = 0))
+        # Email and username exist in a single deleted account
+        single_duplication = (userRecord and not emailRecord) or (emailRecord and not userRecord) or (emailRecord and userRecord and emailRecord.id == userRecord.id)
+
+        # Credentials duplicated on 2 deleted accounts, one has email, other has username
+        double_duplication = userRecord and emailRecord and userRecord.id != emailRecord.id
+        print(single_duplication, double_duplication)
+        if single_duplication:
+            # Effectively restore the account
+            db.session.execute(update(User).where(User.id == userRecord.id).values(username = uname,
+                                                password = bcrypt.generate_password_hash(password),
+                                                email_id = email,
+                                                time_created = datetime.now(),
+                                                last_login = datetime.now(),
+                                                deleted = False,
+                                                time_deleted = None,
+                                                transcriptions = 0,
+                                                translations = 0))
+        elif double_duplication:
+            # Restore the account that was deleted recently and purge the older deleted account, poor dude
+            purgeID = userRecord.id if userRecord.time_deleted > emailRecord.time_deleted else emailRecord.id
+            restoreID = userRecord.id if purgeID != userRecord.id else emailRecord.id
+            db.session.execute(delete(User).where(User.id == purgeID))  #RIP
+            
+            db.session.execute(update(User).where(User.id == restoreID).values(username = uname,
+                                                password = bcrypt.generate_password_hash(password),
+                                                email_id = email,
+                                                time_created = datetime.now(),
+                                                last_login = datetime.now(),
+                                                deleted = False,
+                                                time_deleted = None,
+                                                transcriptions = 0,
+                                                translations = 0))
+        else:
+            # No duplications whatsoever, we good
+            db.session.execute(insert(User).values(username = uname,
+                                                password = bcrypt.generate_password_hash(password),
+                                                email_id = email,
+                                                time_created = datetime.now(),
+                                                last_login = datetime.now(),
+                                                deleted = False,
+                                                time_deleted = None,
+                                                transcriptions = 0,
+                                                translations = 0))
         db.session.commit()
     except (IntegrityError, DataError, StatementError) as e:
+        print(e.__class__)
+        print(traceback.format_exc())
         db.session.rollback()
         abort(500)
     
@@ -109,9 +147,9 @@ def validateUser():
         identity = userMetadata["identity"]
         password = userMetadata["password"]
         if "@" in identity:
-            user = db.session.execute(select(User).where(User.email_id == identity, User.deleted == 0)).scalar_one_or_none()
+            user = db.session.execute(select(User).where(User.email_id == identity, User.deleted == False)).scalar_one_or_none()
         else:
-            user = db.session.execute(select(User).where(User.username == identity, User.deleted == 0)).scalar_one_or_none()
+            user = db.session.execute(select(User).where(User.username == identity, User.deleted == False)).scalar_one_or_none()
 
         if not user:
             return jsonify({"message":"User does not exist"}), 404
@@ -263,7 +301,7 @@ def transcript_speech():
                                    transcripted_text=result["text"],
                                    time_requested=datetime.fromtimestamp(starting_time)))
         db.session.execute(update(User)
-                           .where(User.id == g.decodedToken["sub"], User.deleted == 0)
+                           .where(User.id == g.decodedToken["sub"], User.deleted == False)
                            .values(transcriptions=User.transcriptions + 1))
         db.session.commit()
     except (IntegrityError, DataError, ValueError, CompileError):
@@ -310,7 +348,7 @@ def translate_text():
                                         time_requested=datetime.fromtimestamp(start_time))
                                 )
             db.session.execute(update(User)
-                               .where(User.username == g.decodedToken["sub"], User.deleted == 0)
+                               .where(User.username == g.decodedToken["sub"], User.deleted == False)
                                .values(translations = User.translations + 1))
             db.session.commit()
         except (IntegrityError, DataError, StatementError):
