@@ -193,6 +193,7 @@ def fetch_history():
                                 Transcription_Request.time_requested.label("time_requested"),
                                 Transcription_Request.transcipted_text.label("content"),
                                 Transcription_Request.language.label("lang"),
+                                literal("transcription").label("type"),
                                 literal(None).label("src"),
                                 literal(None).label("dst"),
                                 ).where(Transcription_Request.requested_by == username))
@@ -201,6 +202,7 @@ def fetch_history():
                               Translation_Request.time_requested.label("time_requested"),
                               Translation_Request.translated_text.label("content"),
                               literal(None).label("lang"),
+                              literal("translation").label("type"),
                               Translation_Request.language_from.label("src"),
                               Translation_Request.language_to.label("dst"),
                               ).where(Translation_Request.requested_by == username))
