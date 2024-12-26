@@ -183,9 +183,9 @@ def fetch_history():
     except ValueError:
         raise BadRequest(f"POST /{request.path[1:]} Requires an integer to indicate value result")
     
-    cached_result = RedisManager.get(f"uh:{username}:{filterPreference}_{sortPreference}")
+    cached_result = RedisManager.get(f"uh:{username}:{filterPreference}_{sortPreference}_{currentPage}")
     if cached_result:
-        return jsonify({"result" : orjson.loads(cached_result)})
+        return jsonify(orjson.loads(cached_result))
 
     perPage : int = 10
 
@@ -228,8 +228,8 @@ def fetch_history():
     pyReadableResult : list = [row._asdict() for row in qResult]
 
     if currentPage <= 3:
-        RedisManager.setex(f"uh:{username}:{filterPreference}_{sortPreference}", 120, orjson.dumps(pyReadableResult))
-    return jsonify({"result" : pyReadableResult}), 200
+        RedisManager.setex(f"uh:{username}:{filterPreference}_{sortPreference}_{currentPage}", 120, orjson.dumps(pyReadableResult))
+    return jsonify(pyReadableResult), 200
 
 @app.route("/transcript-speech", methods = ["POST"])
 @enforce_mimetype("form-data")
