@@ -215,10 +215,3 @@ def blacklist():
 @auth.route("/get-blacklist", methods = ["GET"])
 def getBlacklist():
     ...
-
-
-@auth.route("/tkn", methods=["GET"])
-def tkn():
-    rsp = jsonify(tokenManager.activeRefreshTokens)
-    print(rsp.headers)
-    return rsp
