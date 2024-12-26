@@ -1,13 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %} {% endblock %}</title>
-    <link rel = "stylesheet" type = "text/css" href = "{{url_for('static', filename = 'styles/global.css')}}"/>
+    <link rel="stylesheet" type="text/css" href="{{url_for('static', filename = 'styles/global.css')}}" />
     {% block depends %}
     {% endblock %}
 </head>
+
 <body>
     <header>
 
@@ -17,5 +19,7 @@
     <footer>
         Babel
     </footer>
+    <script type="text/javascript" src="{{url_for('static', filename='scripts/silent_reauth.js')}}"></script>
 </body>
+
 </html>
