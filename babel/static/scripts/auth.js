@@ -1,5 +1,5 @@
 document.addEventListener("DOMContentLoaded", function (event) {
-        const authType = window.location.pathname.split("/").slice(1);
+        const authType = window.location.pathname.split("/").slice(1)[0];
         const subButton = document.getElementById("submission-btn");
         if (subButton === undefined || subButton === null) {
             throw new Error("DOM Integrity Error");
@@ -7,23 +7,27 @@ document.addEventListener("DOMContentLoaded", function (event) {
 
         subButton.addEventListener("click", async function (event) {
 
-            const identity = document.getElementById("email_id")?.value.trim();
-            const password = document.getElementById("password")?.value.trim();
-            const cpassword = document.getElementById("cpassword")?.value.trim();
-
-            const authFormData = { identity, pass: password };
-        
+            const password = document.getElementById("password")?.value.trim();            
+            const authFormData = { password: password };
+            
             if (authType !== "login") {
-                authFormData.cpass = cpassword;
+                authFormData.email = document.getElementById("email_id")?.value.trim();
+                authFormData.username = document.getElementById("username")?.value.trim();
+                authFormData.cpassword = document.getElementById("cpassword")?.value.trim();
             }
+            else{
+                authFormData.identity = document.getElementById("identity")?.value.trim();
+            }
+
             try{
-                const response = await fetch("/", {
+                const response = await fetch(authType === "login"? "http://192.168.0.105:8080/login" : "http://192.168.0.105:8080/register", {
                     headers : {
                         "Content-Type" : "application/json",
-                        "Sub" : "babel-auth-client"
+                        "sub" : "babel-auth-client"
                     },
                     method : "POST",
-                    body : authFormData
+                    body : JSON.stringify(authFormData),
+                    credentials : "include"
                 });
                 
                 if(!response.ok){
@@ -31,6 +35,12 @@ document.addEventListener("DOMContentLoaded", function (event) {
                     throw new Error(`${data.message}\nCode: ${response.status}`)
                 }
                 const data = await response.json();
+                alert(data.message);
+
+                localStorage.setItem("access_exp", data.access_exp);
+                localStorage.setItem("leeway", data.leeway !== undefined ? data.leeway : 0);
+
+                window.location.href = window.location.host;
             }
             catch(error){
                 console.error("Submission Error: ", error)
