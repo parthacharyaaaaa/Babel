@@ -1,11 +1,8 @@
 async function checkExpiry(){
     try{
-        console.log("called")
         const exp = localStorage.getItem("access_exp");
         const leeway = localStorage.getItem("leeway") !== null ? localStorage.getItem("leeway") : 0;
         const currentTime = Math.floor(Date.now() / 1000);
-        console.log(exp)
-        console.log(currentTime)
         if (exp != null && exp < currentTime + leeway/3){
             reauth();
         }    
