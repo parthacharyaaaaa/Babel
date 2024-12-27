@@ -56,7 +56,6 @@ def tk_integrity_err(e):
 @auth.errorhandler(HTTPException)
 @auth.errorhandler(InternalServerError)
 def internalServerError(e : Exception):
-    # ErrorLogger.addEntryToQueue(e)
     print(traceback.format_exc())
     print(e.__class__)
     return jsonify({"message" : getattr(e, "description", "An Error Occured"), "Additional Info" : getattr(e, "_additional_info", "There seems to be an issue with our service, please retry after some time or contact support")}), 500

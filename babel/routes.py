@@ -1,6 +1,6 @@
 from flask import jsonify, request, abort, g
 import time
-from babel import app, db, bcrypt, RedisManager, ErrorLogger
+from babel import app, db, bcrypt, RedisManager
 from babel.models import *
 from babel.config import *
 from auxillary_packages.errors import *
@@ -55,7 +55,6 @@ def unexpected_request_format(e : BadRequest | KeyError):
 
 @app.errorhandler(DISCRETE_DB_ERROR)
 def discrete_db_err(e : DISCRETE_DB_ERROR):
-    ErrorLogger.addEntryToQueue(e)
     r = jsonify({"message" : getattr(e, "description", "DB_ERR_500")})
     r.headers.update({"Issuer" : "Babel-Backend-Services"})
     return r, 500
@@ -64,7 +63,6 @@ def discrete_db_err(e : DISCRETE_DB_ERROR):
 @app.errorhandler(HTTPException)
 @app.errorhandler(InternalServerError)
 def internalServerError(e : Exception):
-    ErrorLogger.addEntryToQueue(e)
     print(e.__class__)
     print(traceback.format_exc())
     return jsonify({"message" : getattr(e, "description", "An Error Occured"), "Additional Info" : getattr(e, "_additional_info", "There seems to be an issue with our service, please retry after some time or contact support")}), 500
