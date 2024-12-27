@@ -20,7 +20,7 @@ class Flask_Config:
         MAX_CONTENT_LENGTH = int(os.environ["MAX_CONTENT_LENGTH"])
         ERROR_LOG_FILE = os.path.join(CWD, os.environ["ERROR_LOG_FILE"])
 
-        CSP_STRING = os.environ["CSP_STRING"]
+        CSP_STRING = os.environ["CSP_STRING"] + f" connect-src 'self' {os.environ['AUTH_SERVER_ADDRESS']};"
 
         # Auth Server Communication Metadata
         AUTH_SERVER_ORIGIN = os.environ["AUTH_SERVER_ADDRESS"]

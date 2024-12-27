@@ -21,7 +21,7 @@ FILTER_PREFERENCES = {0 : "all", 1 : "translate", 2 : "transcribe"}
 
 @app.after_request
 def afterRequest(response):
-    response.headers["Content-Security-Policy"] = app.config["CSP_STRING"] + f" connect-src 'self' {os.environ['AUTH_SERVER_ADDRESS']};"
+    response.headers["Content-Security-Policy"] = app.config["CSP_STRING"]
     print(response.headers)
     return response
 
@@ -347,7 +347,7 @@ def translate_text():
 
         cached_result = RedisManager.get("TL:" + str(zlib.adler32(f"{g.decodedToken['sub']}:{src_language}-{dest_language}-{original_text}".encode())))
         if cached_result:
-            return jsonify(orjson.dumps(cached_result)), 200
+            return jsonify(orjson.loads(cached_result)), 200
 
         #Validating strings
         if original_text.strip() == "" or dest_language.strip() == "":
