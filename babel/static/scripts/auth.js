@@ -23,9 +23,7 @@ document.addEventListener("DOMContentLoaded", function (event) {
                 const response = await fetch(authType === "login"? "http://192.168.0.105:8080/login" : "http://192.168.0.105:8080/register", {
                     headers : {
                         "Content-Type" : "application/json",
-                        "sub" : "babel-auth-client",
-                        "X-CLIENT-TYPE" : "web",
-                        "X-CSRF-TOKEN" : localStorage.getItem("X-CSRF-TOKEN")
+                        "sub" : "babel-auth-client"
                     },
                     method : "POST",
                     body : JSON.stringify(authFormData),
@@ -36,6 +34,7 @@ document.addEventListener("DOMContentLoaded", function (event) {
                     const data = await response.json();
                     throw new Error(`${data.message}\nCode: ${response.status}`)
                 }
+
                 const data = await response.json();
                 alert(data.message);
 

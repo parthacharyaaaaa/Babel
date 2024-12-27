@@ -4,9 +4,7 @@ document.addEventListener("DOMContentLoaded", function(event){
         try{
             const response = await fetch(`http://${window.location.hostname}:8080/purge-family`, {
                 headers : {
-                    "Content-Type" : "application/json",
-                    "X-CLIENT-TYPE" : "web",
-                    "X-CSRF-TOKEN" : localStorage.getItem("X-CSRF-TOKEN")
+                    "Content-Type" : "application/json"
                 },
                 method : "GET",
                 credentials : "include"

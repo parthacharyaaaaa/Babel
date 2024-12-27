@@ -96,9 +96,7 @@ document.addEventListener("DOMContentLoaded", function (event) {
                     method : "DELETE",
                     credentials : "include",
                     headers : {
-                        "Content-Type" : "application/json",
-                        "X-CLIENT-TYPE" : "web",
-                        "X-CSRF-TOKEN" : localStorage.getItem("X-CSRF-TOKEN")
+                        "Content-Type" : "application/json"
                     },
                     body : JSON.stringify({password : password1.value})
                 });

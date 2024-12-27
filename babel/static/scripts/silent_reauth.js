@@ -19,9 +19,7 @@ async function reauth(){
         const response = await fetch("http://192.168.0.105:8080/reissue", {
                 method : "GET",
                 headers : {
-                    "Content-Type" : "application/json",
-                    "X-CLIENT-TYPE" : "web",
-                    "X-CSRF-TOKEN" : localStorage.getItem("X-CSRF-TOKEN")
+                    "Content-Type" : "application/json"
                 },
                 credentials : "include"
             }
@@ -33,11 +31,6 @@ async function reauth(){
             else{
                 throw new Error(`${response.status}: Silent Reauthentication failed, details: ${response.statusText}`)
             }
-        }
-
-        const CSRF_CHECK = response.headers.get("X-CSRF-TOKEN");
-        if (CSRF_CHECK !== null || CSRF_CHECK !== undefined){
-            localStorage.setItem("X-CSRF-TOKEN", CSRF_CHECK)
         }
 
         const result = await response.json();
