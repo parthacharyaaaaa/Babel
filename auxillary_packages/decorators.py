@@ -64,7 +64,7 @@ def attach_CORS_headers(endpoint):
                 response.headers["Access-Control-Allow-Origin"] = "http://192.168.0.105:5000"
                 response.headers["Access-Control-Allow-Credentials"] = "true"
                 response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS, DELETE, PUT"
-                response.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type, sub, X-CSRF-TOKEN"
+                response.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type, sub, X-CSRF-TOKEN, X-CLIENT-TYPE"
                 return response, 204
 
             result = endpoint(*args, **kwargs)
