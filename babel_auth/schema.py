@@ -95,7 +95,7 @@ class TokenManager:
         
         aToken: JWT encoded access token\n
         rToken: JWT encoded refresh token'''
-
+        self.incrementActiveTokens()
         decodedRefreshToken = self.decodeToken(rToken, tType = "refresh")
         self.revokeTokenWithIDs(decodedRefreshToken["jti"], decodedRefreshToken['fid'])
 
@@ -162,7 +162,6 @@ class TokenManager:
 
         self._TokenStore.lpush(f"FID:{payload['fid']}", f"{payload['jti']}:{payload['exp']}")
         self._TokenStore.expireat(f"FID:{payload['fid']}", int(payload["exp"]))
-        self.incrementActiveTokens()
 
         return jwt.encode(payload=payload,
                           key=self.signingKey,
@@ -189,8 +188,12 @@ class TokenManager:
         '''Revokes a refresh token using JTI and FID claims, without invalidating the family'''
         try:
             llen = self._TokenStore.llen(f"FID:{fID}")
+
+            if llen == 0:
+                return "Key does not exist"
+            
             if llen >= self.max_llen:
-                self._TokenStore.rpop(f"FID:{fID}", max(1, llen-self.max_llen-1))
+                self._TokenStore.rpop(f"FID:{fID}", max(1, llen-self.max_llen))
 
             self.decrementActiveTokens()
         except ValueError as e:
