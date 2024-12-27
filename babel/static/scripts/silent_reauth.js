@@ -37,10 +37,7 @@ async function reauth(){
         const csrfToken = response.headers.get("X-CSRF-TOKEN");
         if (csrfToken) {
             localStorage.setItem("X-CSRF-TOKEN", csrfToken);
-        } else {
-            throw new Error("CSRF Token not found!");
         }
-
         const result = await response.json();
 
         localStorage.setItem("access_exp", result.access_exp);

@@ -19,8 +19,6 @@ document.addEventListener("DOMContentLoaded", async function (event) {
         const csrfToken = response.headers.get("X-CSRF-TOKEN");
         if (csrfToken) {
             localStorage.setItem("X-CSRF-TOKEN", csrfToken);
-        } else {
-            throw new Error("CSRF Token not found!");
         }
 
         const available_languages = await response.json();

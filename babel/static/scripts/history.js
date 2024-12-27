@@ -18,8 +18,6 @@ async function getHistory(sortOption, filterOption, pageNumber = 1) {
         const csrfToken = response.headers.get("X-CSRF-TOKEN");
         if (csrfToken) {
             localStorage.setItem("X-CSRF-TOKEN", csrfToken);
-        } else {
-            throw new Error("CSRF Token not found!");
         }
         
         results = await response.json();
