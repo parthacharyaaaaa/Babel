@@ -330,6 +330,8 @@ def transcript_speech():
 def translate_text():
     try:
         translation_request = request.get_json(force=True, silent=False)
+        if request.content_length and request.content_length > 8192:
+            return BadRequest("Maximum request size exceeded")
 
         original_text : str = translation_request["text"]
         dest_language : str = translation_request["dest"].lower()
