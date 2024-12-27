@@ -90,17 +90,13 @@ def attach_CORS_headers(endpoint):
 def CSRF_protect(endpoint):
     @functools.wraps(endpoint)
     def decorated(*args, **kwargs):
-        print("Called")
-
         clientType = request.headers.get("X-CLIENT-TYPE")
         if not clientType:
-            print("No ctype")
             clientType = "web" # Safe assumption, at least for GET
         elif clientType not in ["web", "mobile", "api", "handheld", "test"]:
             raise BadRequest("Invalid Client Type")
     
         if clientType == "web":
-            print(request.headers)
             yin_token = request.headers.get("X-CSRF-TOKEN")
             yang_token = request.cookies.get("X-CSRF-TOKEN")
 
@@ -108,45 +104,14 @@ def CSRF_protect(endpoint):
                 yin_token = None
             if yang_token == "null":
                 yang_token = None
-            print(yin_token, yang_token)
 
             if not yin_token or not yang_token or (yin_token != yang_token):
-                print("Bad request")
                 CSRF_TOKEN = secrets.token_urlsafe(32)
                 if request.method != "GET":         # Reject state-changing requests from a non-CSRF compliant web client >:(
                     response = jsonify("CSRF check failed for state changing request")
-                    response.headers["X-CSRF-TOKEN"] = CSRF_TOKEN
-                    response.set_cookie("X-CSRF-TOKEN",
-                                        value=CSRF_TOKEN,
-                                        max_age=timedelta(minutes=30),
-                                        httponly=True)
-                    print("Attached HTTP headers")
-                    return response, 400
-
+                    return response, 401
                 else:
-                    result : Response | str | None = endpoint(*args, **kwargs)
-                    print("After bad request web client request")
-                    if isinstance(result, tuple):
-                        response = result[0] if isinstance(result[0], Response) else make_response(result[0])
-                        code = result[1]
-                    elif isinstance(result, str):
-                        response = make_response(result)
-                        code = 200
-                    elif not result:
-                        response = make_response(result)
-                        code = 500
-                    else:
-                        response = result
-                        code = 200
-
-                    response.headers["X-CSRF-TOKEN"] = CSRF_TOKEN
-                    response.set_cookie(key="X-CSRF-TOKEN",
-                                        value=CSRF_TOKEN,
-                                        max_age=timedelta(minutes=30),
-                                        httponly=True)
-                    print("Attaching headers to bad request client GET")
-                    print(response.headers)
-                    return response, code
+                    pass
 
             # CSRF-Compliant web client :D
             result : Response = endpoint(*args, **kwargs)
@@ -157,14 +122,13 @@ def CSRF_protect(endpoint):
                 response = make_response(result)
                 statusCode = 200
             elif not result:
-                return make_response(), 500
+                raise Exception()
             else:
                 response = result
                 statusCode = 200
 
             # Refresh CSRF token randomly hehe they'll never see it coming >:)
-            print("reached")
-            if random.randint(1,60) % 6 == 0:
+            if random.randint(1,10) == 1:
                 CSRF_TOKEN = secrets.token_urlsafe(32)
                 response.headers["X-CSRF-TOKEN"] = CSRF_TOKEN
                 response.set_cookie("X-CSRF-TOKEN",
