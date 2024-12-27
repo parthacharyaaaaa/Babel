@@ -1,19 +1,20 @@
 from babel_auth import auth, tokenManager
-from auxillary_packages.decorators import enforce_mimetype, private, attach_CORS_headers
+from auxillary_packages.decorators import enforce_mimetype, private, attach_CORS_headers, CSRF_protect
 from auxillary_packages.errors import TOKEN_STORE_INTEGRITY_ERROR
-from flask import request, url_for, jsonify, Response, redirect
+from flask import request, jsonify, Response, make_response
 from werkzeug.exceptions import BadRequest, MethodNotAllowed, NotFound, Unauthorized, Forbidden, InternalServerError, HTTPException
 import requests
 import os
 import jwt.exceptions as JWT_exc
 import time
 import traceback
-
+import secrets
 
 @auth.after_request
 def enforceMinCSP(response):
     if response:
-        response.headers["Content-Security-Policy"] = f"default-src 'self'; connect-src 'self' {os.environ['RS_DOMAIN']}"
+        response.headers["Content-Security-Policy"] = auth.config["CSP"]
+
     return response
 ### Error Handlers ###
 @auth.errorhandler(MethodNotAllowed)
@@ -64,6 +65,7 @@ def internalServerError(e : Exception):
 
 @auth.route("/login", methods = ["POST", "OPTIONS"])
 @attach_CORS_headers
+@CSRF_protect
 @enforce_mimetype("json")
 def login():
     authentication_data = request.get_json(force=True, silent=False)
@@ -114,6 +116,7 @@ def login():
 
 @auth.route("/register", methods = ["POST", "OPTIONS"])
 @attach_CORS_headers
+@CSRF_protect
 @enforce_mimetype("json")
 def register():
     registrationDetails : dict = request.get_json(force=True, silent=False)
@@ -180,6 +183,7 @@ def deleteAccount():
 
 @auth.route("/reissue", methods = ["GET", "OPTIONS"])
 @attach_CORS_headers
+@CSRF_protect
 def reissue():
     refreshToken = request.cookies.get("refresh", request.cookies.get("Refresh"))
 
@@ -221,6 +225,7 @@ def reissue():
 
 @auth.route("/purge-family", methods = ["GET", "OPTIONS"])
 @attach_CORS_headers
+@CSRF_protect
 def purgeFamily():
     '''
     Purges an entire token family in case of a reuse attack or a normal client logout
@@ -238,6 +243,22 @@ def purgeFamily():
     response : Response = jsonify({"message" : "Token Revoked"})
     response.headers["iss"] = "babel-auth-service"
     return response, 204
+
+
+@auth.route("/get-csrf", methods = ["OPTIONS", "GET"])
+@attach_CORS_headers
+def issueCSRF():
+    response = make_response()
+    response.headers["X-CSRF-TOKEN"] = secrets.token_urlsafe(32)
+    response.headers["TIME-OF-ISSUANCE"] = time.time()
+    response.headers["ISSUER"] = "babel-auth-service"
+
+    response.set_cookie(key="X-CSRF-TOKEN",
+                        value=response.headers["X-CSRF-TOKEN"],
+                        max_age=1200,
+                        httponly=True)
+    
+    return response, 201
 
 @auth.route("/ip-blacklist", methods = ["POST"])
 def blacklist():

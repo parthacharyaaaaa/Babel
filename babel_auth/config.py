@@ -17,8 +17,7 @@ class FlaskConfig:
         SQLALCHEMY_DATABASE_URI = "sqlite:///" + os.path.join(CWD, os.environ["AUTH_DB_URI"])
         SQLALCHEMY_TRACK_MODIFICATIONS = bool(os.environ.get("TRACK_MODIFICATIONS", False))
 
-        # Session Metadata
-        PERMANENT_SESSION_LIFETIME = timedelta(days=int(os.environ["SESSION_LIFETIME"]))
+        CSP = f"default-src 'self'; connect-src 'self' {os.environ['RS_DOMAIN']}"
 
         # Deployment Metadata
         PORT = int(os.environ["PORT"])
