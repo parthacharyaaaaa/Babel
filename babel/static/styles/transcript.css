@@ -1,4 +1,4 @@
-.wrapper {
+#transcription-wrapper {
     display: flex;
     flex-flow: column nowrap;
 
@@ -9,11 +9,11 @@
     gap: 1rem;
 }
 
-.wrapper>.audio-dropper {
+#transcription-wrapper>.audio-dropper {
     display: none;
 }
 
-.wrapper>label {
+#transcription-wrapper>label {
     border-radius: 10px;
     border: 1px solid var(--BORDER-COLOR);
     padding: 1rem;
@@ -36,14 +36,15 @@
     }
 }
 
-.wrapper span{
+#transcription-wrapper span{
     font-size: var(--FSIZE-XL);
     color: var(--BORDER-COLOR);
     opacity: 0.6;
     font-weight: bolder;
 }
 
-.wrapper>.transcription-output {
+
+#transcription-wrapper>.transcription-output {
     width: 80rem;
     height: 30rem;
     border: 1px solid var(--BORDER-COLOR);
@@ -55,4 +56,46 @@
 .confidence{
     background-color: var(--SECONDARY-BG);
     color: var(--TERTIARY-TEXT-COLOR);
+}
+
+@media (min-width: 320px){
+    #transcription-wrapper > #audio-label{
+        justify-content: center;
+        align-items: center;
+        width: 15rem;
+        margin: 0 auto;
+    }
+
+    #transcription-wrapper>.transcription-output{
+        width: 20rem;
+        height: 25rem;
+    }
+}
+
+@media (min-width: 480px){
+    #transcription-wrapper > #audio-label{
+        width: 30rem;
+        margin: 0 auto;
+    }
+    
+    #transcription-wrapper>.transcription-output{
+        width: 90%;
+        height: 30rem;
+    }
+    
+}
+
+@media (min-width: 768px){
+    #transcription-wrapper > #audio-label{
+        width: 50rem;
+        margin: 0 auto;
+    }
+    
+}
+
+@media (min-width: 1200px){
+    #transcription-wrapper>.transcription-output{
+        width: 90%;
+        height: 23rem;
+    }
 }

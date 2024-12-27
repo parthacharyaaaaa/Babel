@@ -2,7 +2,7 @@
 {% block title %} Babel | Translate {% endblock %}
 
 {% block depends %}
-<link rel="stylesheet" type="text/css" href="{{url_for('static', filename='styles/func-pages.css')}}" />
+<link rel="stylesheet" type="text/css" href="{{url_for('static', filename='styles/translate.css')}}" />
 {% endblock %}
 
 {% block content %}
@@ -14,7 +14,7 @@
     </section>
     <section class="wrapper" id="wrapper">
         <div class="container" id="og-text-container">
-        <input list="source-language" id="source-languages" name="source-languages" placeholder="Select or type a language (auto)">
+        <input list="source-language" id="source-languages" class="lang-list" name="source-languages" placeholder="Select or type a language (auto)">
             <datalist id = "source-language" class="language-list">
 
             </datalist>
@@ -23,7 +23,7 @@
                 placeholder="Enter the text you wish to translate"></textarea>
         </div>
         <div class="container" id="translated-text-container">
-            <input list="dest-language" id="dest-languages" name="dest-languages" placeholder="Select or type a language">
+            <input list="dest-language" id="dest-languages" class="lang-list" name="dest-languages" placeholder="Select or type a language">
             <datalist id = "dest-language" class="language-list">
 
             </datalist>
@@ -32,7 +32,7 @@
                 aria-placeholder="Your translated text will come here"></div>
         </div>
     </section>
-    <button type="button" id="submit-text">Translate</button>
+    <button type="button" id="submit-text" class="submit-btn">Translate</button>
 </main>
 
 <script type="text/javascript" src="{{url_for('static', filename = 'scripts/load_languages.js')}}"></script>

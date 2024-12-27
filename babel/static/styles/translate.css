@@ -1,0 +1,132 @@
+.info {
+    padding: 1rem;
+}
+
+.wrapper {
+    background-color: var(--PRIMARY-BG);
+    padding: 0.5rem 1.5rem;
+    display: flex;
+    flex-flow: row nowrap;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.textbox-big {
+    border-radius: 10px;
+    background-color: transparent;
+    padding: 1rem;
+    height: 40rem;
+    width: 45rem;
+    border: 1px solid #415a77;
+    color: var(--PRIMARY-TEXT-COLOR);
+    box-sizing: border-box;
+    margin: 0.5rem;
+
+    &::placeholder {
+        color: var(--TERTIARY-TEXT-COLOR);
+    }
+
+    &:hover, &:focus {
+        border: 2px solid var(--TERTIARY-TEXT-COLOR);
+        outline: none;
+    }
+}
+
+.lang-list{
+    background-color: var(--PRIMARY-BG);
+    color: var(--PRIMARY-TEXT-COLOR);
+    border: none;
+}
+
+.container {
+    padding: 0.1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+/* Media Queries for responsiveness */
+@media (max-width: 2400px){
+    .wrapper{
+        flex-direction: row;
+        justify-content: center;
+        padding: 1rem;
+    }
+
+    .submit-btn{
+        width: 8rem;
+        pad: 0.5rem;
+        margin: 0 auto;
+    }
+
+    .textbox-big{
+        width: 45rem;
+        height: 30rem;
+    }
+}
+
+@media (max-width: 1200px) {
+    .wrapper {
+        flex-direction: column;
+        justify-content: center;
+        padding: 1rem;
+    }
+    
+    .textbox-big{
+        width: 30rem;
+        height: 16rem;
+    }
+    
+}
+
+@media (max-width: 768px) {
+    .wrapper {
+        flex-direction: column;
+        justify-content: center;
+        padding: 1rem;
+    }
+
+    .textbox-big {
+        width: 30rem;
+        height: 20rem;
+        font-size: 1.1rem;
+        padding: 0.8rem;
+    }   
+}
+
+@media (max-width: 480px) {
+    .wrapper {
+        flex-direction: column;
+        padding: 0.5rem;
+        justify-content: space-between;
+        align-content: center;
+    }
+
+    .textbox-big {
+        width: 20rem;
+        height: 10rem;
+        font-size: 1rem;
+        padding: 0.6rem;
+    }
+
+    #audio-label span {
+        font-size: 0.8rem;
+    }
+
+    #submit-audio {
+        padding: 0.6rem;
+        font-size: 0.9rem;
+    }
+
+    .confidence, .transcription-output {
+        font-size: 0.9rem;
+    }
+
+    #transcription-wrapper>.transcription-output{
+        width: 40rem;
+        height: 35rem;
+        margin: 1rem auto;
+    }
+}
