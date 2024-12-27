@@ -302,10 +302,17 @@ def transcript_speech():
     if audio_file is None:
         raise BadRequest("Audio File Not Found in Request Object\nAt:POST /transcript-speech")
     
+    if audio_file.content_length and audio_file.content_type > 25*1024*1024:
+        raise BadRequest("Very large file, cannot process!")
+    
     starting_time = time.time()
     #Saving file
     filepath : str = os.path.join(app.config["UPLOAD_FOLDER"], audio_file.filename)
     audio_file.save(filepath)
+
+    if os.path.getsize(filepath) > 25*1024*1024:
+        os.remove(filepath)
+        raise BadRequest("Very large file, cannot process!")
 
     result = getAudioTranscription(filepath)
     time_taken = starting_time - time.time()
