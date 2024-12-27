@@ -4,7 +4,9 @@ async function getHistory(sortOption, filterOption, pageNumber = 1) {
             method: "GET",
             credentials: "include",
             headers: {
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+                "X-CLIENT-TYPE" : "web",
+                "X-CSRF-TOKEN" : localStorage.getItem("X-CSRF-TOKEN")
             }
         });
 

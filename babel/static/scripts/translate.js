@@ -8,7 +8,9 @@ document.addEventListener("DOMContentLoaded", async function(event) {
             const response = await fetch("/translate-text", {
                 method : "POST",
                 headers : {
-                    "Content-Type" : "application/json"
+                    "Content-Type" : "application/json",
+                    "X-CLIENT-TYPE" : "web",
+                    "X-CSRF-TOKEN" : localStorage.getItem("X-CSRF-TOKEN")
                 },
                 body : JSON.stringify({text : original_text, src : src_lang, dest : dest_lang})
             });

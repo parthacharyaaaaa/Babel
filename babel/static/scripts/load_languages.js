@@ -3,7 +3,9 @@ document.addEventListener("DOMContentLoaded", async function (event) {
         const response = await fetch("/fetch-languages", {
             method: "GET",
             headers: {
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+                "X-CLIENT-TYPE" : "web",
+                "X-CSRF-TOKEN" : localStorage.getItem("X-CSRF-TOKEN")
             }
         });
 
