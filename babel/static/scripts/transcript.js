@@ -52,6 +52,11 @@ document.addEventListener("DOMContentLoaded", async function (event) {
                 throw new Error(`An error occured in getting the transcript:\nStatus: ${response.status}\nMessage: ${response.statusText}`);
             }
 
+            const CSRF_CHECK = response.headers.get("X-CSRF-TOKEN");
+            if (CSRF_CHECK !== null || CSRF_CHECK !== undefined){
+                localStorage.setItem("X-CSRF-TOKEN", CSRF_CHECK)
+            }
+
             const data = await response.json();
             const transcript = data["text"];
             const confidence = data["confidence"];

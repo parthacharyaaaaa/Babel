@@ -15,6 +15,11 @@ async function getHistory(sortOption, filterOption, pageNumber = 1) {
         }
         isExhausted = response.headers.get("exhausted");
         
+        const CSRF_CHECK = response.headers.get("X-CSRF-TOKEN");
+        if (CSRF_CHECK !== null || CSRF_CHECK !== undefined){
+            localStorage.setItem("X-CSRF-TOKEN", CSRF_CHECK)
+        }
+        
         results = await response.json();
         const parent = document.querySelector(".history-list");
 

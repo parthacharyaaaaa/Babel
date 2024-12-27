@@ -35,6 +35,11 @@ async function reauth(){
             }
         }
 
+        const CSRF_CHECK = response.headers.get("X-CSRF-TOKEN");
+        if (CSRF_CHECK !== null || CSRF_CHECK !== undefined){
+            localStorage.setItem("X-CSRF-TOKEN", CSRF_CHECK)
+        }
+
         const result = await response.json();
 
         localStorage.setItem("access_exp", result.access_exp);

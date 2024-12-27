@@ -15,6 +15,11 @@ document.addEventListener("DOMContentLoaded", async function (event) {
             throw new Error(`Failed to fetch available languages from server. Status: ${statusCode} ${statusText}`);
         }
 
+        const CSRF_CHECK = response.headers.get("X-CSRF-TOKEN");
+        if (CSRF_CHECK !== null || CSRF_CHECK !== undefined){
+            localStorage.setItem("X-CSRF-TOKEN", CSRF_CHECK)
+        }
+        
         const available_languages = await response.json();
         let languages_lists = document.querySelectorAll(".language-list");
 

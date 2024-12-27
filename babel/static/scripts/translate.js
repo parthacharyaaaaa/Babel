@@ -21,6 +21,11 @@ document.addEventListener("DOMContentLoaded", async function(event) {
                 throw new Error(`Server Error. Status: ${statusCode} ${statusText}`);
             }
 
+            const CSRF_CHECK = response.headers.get("X-CSRF-TOKEN");
+            if (CSRF_CHECK !== null || CSRF_CHECK !== undefined){
+                localStorage.setItem("X-CSRF-TOKEN", CSRF_CHECK)
+            }
+
             const data = await response.json();
             let translated_textbox = document.getElementById("translated-text");
             translated_textbox.innerText = data["translated-text"];
