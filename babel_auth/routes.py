@@ -178,7 +178,7 @@ def deleteAccount():
     return jsonify({"message" : "resource deleted successfully"}), 204
 
 
-@auth.route("/reissue", methods = ["GET"])
+@auth.route("/reissue", methods = ["GET", "OPTIONS"])
 @attach_CORS_headers
 def reissue():
     refreshToken = request.cookies.get("refresh", request.cookies.get("Refresh"))
