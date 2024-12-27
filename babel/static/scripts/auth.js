@@ -32,15 +32,16 @@ document.addEventListener("DOMContentLoaded", function (event) {
                     credentials : "include"
                 });
                 
+                const csrfToken = response.headers.get("X-CSRF-TOKEN");
+                if (csrfToken) {
+                    localStorage.setItem("X-CSRF-TOKEN", csrfToken);
+                }
+
                 if(!response.ok){
                     const data = await response.json();
                     throw new Error(`${data.message}\nCode: ${response.status}`)
                 }
 
-                const csrfToken = response.headers.get("X-CSRF-TOKEN");
-                if (csrfToken) {
-                    localStorage.setItem("X-CSRF-TOKEN", csrfToken);
-                }
 
                 const data = await response.json();
                 alert(data.message);

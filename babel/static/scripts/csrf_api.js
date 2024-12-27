@@ -11,17 +11,18 @@ document.addEventListener("DOMContentLoaded", async function(event){
                     },
                     credentials : "include"
                 });
-
-                if(!response.ok){
-                    throw new Error("CSRF issuance failed");
-                }
-
+                
                 const csrfToken = response.headers.get("X-CSRF-TOKEN");
                 if (csrfToken) {
                     localStorage.setItem("X-CSRF-TOKEN", csrfToken);
                 } else {
                     throw new Error("CSRF Token not found!");
                 }
+                
+                if(!response.ok){
+                    throw new Error("CSRF issuance failed");
+                }
+
             }
             catch(error){
                 console.error(error)

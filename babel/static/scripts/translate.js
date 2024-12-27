@@ -15,6 +15,10 @@ document.addEventListener("DOMContentLoaded", async function(event) {
                 body : JSON.stringify({text : original_text, src : src_lang, dest : dest_lang}),
                 credentials : 'include'
             });
+            const csrfToken = response.headers.get("X-CSRF-TOKEN");
+            if (csrfToken) {
+                localStorage.setItem("X-CSRF-TOKEN", csrfToken);
+            }
 
             if(!response.ok){
                 const statusCode = response.status;
@@ -22,10 +26,6 @@ document.addEventListener("DOMContentLoaded", async function(event) {
                 throw new Error(`Server Error. Status: ${statusCode} ${statusText}`);
             }
 
-            const csrfToken = response.headers.get("X-CSRF-TOKEN");
-            if (csrfToken) {
-                localStorage.setItem("X-CSRF-TOKEN", csrfToken);
-            }
 
             const data = await response.json();
             let translated_textbox = document.getElementById("translated-text");

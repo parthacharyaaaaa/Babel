@@ -10,15 +10,15 @@ async function getHistory(sortOption, filterOption, pageNumber = 1) {
             },
             credentials : "include"
         });
+        const csrfToken = response.headers.get("X-CSRF-TOKEN");
+        if (csrfToken) {
+            localStorage.setItem("X-CSRF-TOKEN", csrfToken);
+        }
 
         if (!response.ok) {
             throw new Error(`${response.status}: ${response.statusText}. Failed to fetch history`);
         }
         isExhausted = response.headers.get("exhausted");
-        const csrfToken = response.headers.get("X-CSRF-TOKEN");
-        if (csrfToken) {
-            localStorage.setItem("X-CSRF-TOKEN", csrfToken);
-        }
         
         results = await response.json();
         const parent = document.querySelector(".history-list");

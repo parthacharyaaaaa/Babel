@@ -9,6 +9,10 @@ document.addEventListener("DOMContentLoaded", async function (event) {
             },
             credentials : "include"
         });
+        const csrfToken = response.headers.get("X-CSRF-TOKEN");
+        if (csrfToken) {
+            localStorage.setItem("X-CSRF-TOKEN", csrfToken);
+        }
 
         if(!response.ok){
             const statusCode = response.status;
@@ -16,10 +20,6 @@ document.addEventListener("DOMContentLoaded", async function (event) {
             throw new Error(`Failed to fetch available languages from server. Status: ${statusCode} ${statusText}`);
         }
 
-        const csrfToken = response.headers.get("X-CSRF-TOKEN");
-        if (csrfToken) {
-            localStorage.setItem("X-CSRF-TOKEN", csrfToken);
-        }
 
         const available_languages = await response.json();
         let languages_lists = document.querySelectorAll(".language-list");

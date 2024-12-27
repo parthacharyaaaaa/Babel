@@ -26,6 +26,10 @@ async function reauth(){
                 credentials : "include"
             }
         );
+        const csrfToken = response.headers.get("X-CSRF-TOKEN");
+        if (csrfToken) {
+            localStorage.setItem("X-CSRF-TOKEN", csrfToken);
+        }
         if(!response.ok){
             if (response.status === 401){
                 alert("It seems there is an issue with your session. Please reauthenticate to continue using Babel. We apologize for the inconveninece. If this issue persists, contact support");
@@ -33,10 +37,6 @@ async function reauth(){
             else{
                 throw new Error(`${response.status}: Silent Reauthentication failed, details: ${response.statusText}`)
             }
-        }
-        const csrfToken = response.headers.get("X-CSRF-TOKEN");
-        if (csrfToken) {
-            localStorage.setItem("X-CSRF-TOKEN", csrfToken);
         }
         const result = await response.json();
 
