@@ -1,9 +1,10 @@
 from jwt import decode, PyJWTError, ExpiredSignatureError
-from flask import request, g, make_response
+from flask import request, g, make_response, Response
 import os
 from werkzeug.exceptions import Unauthorized, BadRequest
 from datetime import timedelta
 import functools
+import secrets, random
 
 def token_required(endpoint):
     '''
@@ -81,4 +82,64 @@ def attach_CORS_headers(endpoint):
         except Exception as e:
             print(e.__class__)
             raise e
+    return decorated
+
+def CSRF_protect(endpoint):
+    @functools.wraps(endpoint)
+    def decorated(*args, **kwargs):
+        if request.headers.get("X-CLIENT-TYPE").lower() not in ["web", "mobile", "api", "handheld", "test"]:
+            raise BadRequest("Invalid Client Type")
+    
+        if request.headers.get("X-CLIENT-TYPE") == "web":
+            yin_token = request.headers.get("X-CSRF-TOKEN")
+            yang_token = request.cookies.get("X-CSRF-TOKEN")
+
+            if not yin_token or not yang_token or (yin_token != yang_token):
+                CSRF_TOKEN = secrets.token_urlsafe(32)
+                if request.method != "GET":         # Reject state-changing requests from a non-CSRF compliant web client >:(
+                    response = make_response("CSRF check failed for state changing request")
+                    response.headers["X-CSRF-TOKEN"] = CSRF_TOKEN
+                    response.set_cookie("X-CSRF-TOKEN",
+                                        value=CSRF_TOKEN,
+                                        max_age=timedelta(minutes=30),
+                                        httponly=True)
+                    return response, 400
+                else:
+                    response : Response | None = endpoint(*args, **kwargs)
+                    if response:
+                        if isinstance(response, tuple):
+                            code = response[1]
+                            response = response[0]
+                        else:
+                            code = 200
+                        response.headers["X-CSRF-TOKEN"] = CSRF_TOKEN
+                        response.set_cookie(key="X-CSRF-TOKEN",
+                                            value=CSRF_TOKEN,
+                                            max_age=timedelta(minutes=30),
+                                            httponly=True)
+                    return response, code
+
+            # CSRF-Compliant web client :D
+            result : Response = endpoint(*args, **kwargs)
+            if isinstance(result, tuple):
+                response = result[0]
+                statusCode = result[1]
+            elif not result:
+                return make_response(), 500
+            else:
+                response = result
+                statusCode = 200
+
+            # Refresh CSRF token randomly hehe they'll never see it coming >:)
+            if random.randint(1,60) % 6 == 0:
+                CSRF_TOKEN = secrets.token_urlsafe(32)
+                response.headers["X-CSRF-TOKEN"] = CSRF_TOKEN
+                response.set_cookie("X-CSRF-TOKEN",
+                                    value=CSRF_TOKEN,
+                                    max_age=timedelta(minutes=30),
+                                    httponly=True)
+            return response, statusCode
+
+        # If not web client, business as usual
+        return endpoint(*args, **kwargs)
     return decorated
