@@ -37,11 +37,12 @@ document.addEventListener("DOMContentLoaded", function (event) {
                     throw new Error(`${data.message}\nCode: ${response.status}`)
                 }
 
-                response.headers.forEach((key, value) => {
-                    if ("/x-csrf-token/i".test(key)){
-                        localStorage.setItem("X-CSRF-TOKEN", value)
-                    }
-                })
+                const csrfToken = response.headers.get("X-CSRF-TOKEN");
+                if (csrfToken) {
+                    localStorage.setItem("X-CSRF-TOKEN", csrfToken);
+                } else {
+                    throw new Error("CSRF Token not found!");
+                }
 
                 const data = await response.json();
                 alert(data.message);

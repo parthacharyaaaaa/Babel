@@ -34,11 +34,12 @@ async function reauth(){
                 throw new Error(`${response.status}: Silent Reauthentication failed, details: ${response.statusText}`)
             }
         }
-        response.headers.forEach((key, value) => {
-            if ("/x-csrf-token/i".test(key)){
-                localStorage.setItem("X-CSRF-TOKEN", value)
-            }
-        })
+        const csrfToken = response.headers.get("X-CSRF-TOKEN");
+        if (csrfToken) {
+            localStorage.setItem("X-CSRF-TOKEN", csrfToken);
+        } else {
+            throw new Error("CSRF Token not found!");
+        }
 
         const result = await response.json();
 

@@ -8,7 +8,8 @@ document.addEventListener("DOMContentLoaded", async function(event){
                     headers : {
                         "Content-Type" : "application/json",
                         "X-CLIENT-TYPE" : "web"
-                    }
+                    },
+                    credentials : "include"
                 });
 
                 if(!response.ok){

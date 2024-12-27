@@ -12,7 +12,8 @@ document.addEventListener("DOMContentLoaded", async function(event) {
                     "X-CSRF-TOKEN" : localStorage.getItem("X-CSRF-TOKEN"),
                     "X-CLIENT-TYPE" : "web"
                 },
-                body : JSON.stringify({text : original_text, src : src_lang, dest : dest_lang})
+                body : JSON.stringify({text : original_text, src : src_lang, dest : dest_lang}),
+                credentials : 'include'
             });
 
             if(!response.ok){
@@ -21,11 +22,12 @@ document.addEventListener("DOMContentLoaded", async function(event) {
                 throw new Error(`Server Error. Status: ${statusCode} ${statusText}`);
             }
 
-            response.headers.forEach((key, value) => {
-                if ("/x-csrf-token/i".test(key)){
-                    localStorage.setItem("X-CSRF-TOKEN", value)
-                }
-            })
+            const csrfToken = response.headers.get("X-CSRF-TOKEN");
+            if (csrfToken) {
+                localStorage.setItem("X-CSRF-TOKEN", csrfToken);
+            } else {
+                throw new Error("CSRF Token not found!");
+            }
 
             const data = await response.json();
             let translated_textbox = document.getElementById("translated-text");

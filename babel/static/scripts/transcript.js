@@ -45,18 +45,20 @@ document.addEventListener("DOMContentLoaded", async function (event) {
                 headers : {
                     "X-CSRF-TOKEN" : localStorage.getItem("X-CSRF-TOKEN"),
                     "X-CLIENT-TYPE" : "web"
-                }
+                },
+                credentials : "include"
             });
 
             if (!response.ok) {
                 throw new Error(`An error occured in getting the transcript:\nStatus: ${response.status}\nMessage: ${response.statusText}`);
             }
 
-            response.headers.forEach((key, value) => {
-                if ("/x-csrf-token/i".test(key)){
-                    localStorage.setItem("X-CSRF-TOKEN", value)
-                }
-            })
+            const csrfToken = response.headers.get("X-CSRF-TOKEN");
+            if (csrfToken) {
+                localStorage.setItem("X-CSRF-TOKEN", csrfToken);
+            } else {
+                throw new Error("CSRF Token not found!");
+            }
 
             const data = await response.json();
             const transcript = data["text"];

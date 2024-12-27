@@ -7,18 +7,20 @@ async function getHistory(sortOption, filterOption, pageNumber = 1) {
                 "Content-Type": "application/json",
                 "X-CSRF-TOKEN" : localStorage.getItem("X-CSRF-TOKEN"),
                 "X-CLIENT-TYPE" : "web"
-            }
+            },
+            credentials : "include"
         });
 
         if (!response.ok) {
             throw new Error(`${response.status}: ${response.statusText}. Failed to fetch history`);
         }
         isExhausted = response.headers.get("exhausted");
-        response.headers.forEach((key, value) => {
-            if ("/x-csrf-token/i".test(key)){
-                localStorage.setItem("X-CSRF-TOKEN", value)
-            }
-        })
+        const csrfToken = response.headers.get("X-CSRF-TOKEN");
+        if (csrfToken) {
+            localStorage.setItem("X-CSRF-TOKEN", csrfToken);
+        } else {
+            throw new Error("CSRF Token not found!");
+        }
         
         results = await response.json();
         const parent = document.querySelector(".history-list");
