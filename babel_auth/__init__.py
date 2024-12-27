@@ -1,7 +1,6 @@
 import os
 import json
 from flask import Flask
-
 from babel_auth.config import flaskconfig, CWD
 from babel_auth.schema import TokenManager
 

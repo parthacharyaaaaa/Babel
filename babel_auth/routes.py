@@ -1,13 +1,14 @@
 from babel_auth import auth, tokenManager
 from auxillary_packages.decorators import enforce_mimetype, private, attach_CORS_headers
 from auxillary_packages.errors import TOKEN_STORE_INTEGRITY_ERROR
-from flask import request, make_response, jsonify, Response
+from flask import request, url_for, jsonify, Response, redirect
 from werkzeug.exceptions import BadRequest, MethodNotAllowed, NotFound, Unauthorized, Forbidden, InternalServerError, HTTPException
 import requests
 import os
 import jwt.exceptions as JWT_exc
 import time
 import traceback
+
 
 @auth.after_request
 def enforceMinCSP(response):
@@ -65,7 +66,6 @@ def internalServerError(e : Exception):
 @attach_CORS_headers
 @enforce_mimetype("json")
 def login():
-    print(0)
     authentication_data = request.get_json(force=True, silent=False)
     if not ("identity" in authentication_data and "password" in authentication_data):
         raise BadRequest(f"POST /{request.root_path} expects identity and password in HTTP body")
@@ -78,15 +78,12 @@ def login():
         return jsonify({"message" : "Authentication Failed",
                         "response_message" : valid.json().get("message", "None")}), valid.status_code
     
-    print(1)
-    
     subject = valid.json()["sub"]
     aToken = tokenManager.issueAccessToken(sub = subject)
     rToken = tokenManager.issueRefreshToken(sub = subject,
                                             firstTime=True)
 
     epoch = time.time()
-    print(3)
     response = jsonify({
         "message" : "Login complete",
         "time_of_issuance" : epoch,
