@@ -87,10 +87,13 @@ def attach_CORS_headers(endpoint):
 def CSRF_protect(endpoint):
     @functools.wraps(endpoint)
     def decorated(*args, **kwargs):
-        if request.headers.get("X-CLIENT-TYPE").lower() not in ["web", "mobile", "api", "handheld", "test"]:
+        clientType = request.headers.get("X-CLIENT-TYPE")
+        if not clientType:
+            clientType = "web" # Safe assumption, at least for OPTIONS and GET
+        elif clientType not in ["web", "mobile", "api", "handheld", "test"]:
             raise BadRequest("Invalid Client Type")
     
-        if request.headers.get("X-CLIENT-TYPE") == "web":
+        if clientType == "web":
             yin_token = request.headers.get("X-CSRF-TOKEN")
             yang_token = request.cookies.get("X-CSRF-TOKEN")
 
@@ -104,12 +107,16 @@ def CSRF_protect(endpoint):
                                         max_age=timedelta(minutes=30),
                                         httponly=True)
                     return response, 400
+
                 else:
-                    response : Response | None = endpoint(*args, **kwargs)
+                    response : Response | str | None = endpoint(*args, **kwargs)
                     if response:
                         if isinstance(response, tuple):
                             code = response[1]
                             response = response[0]
+                        elif isinstance(response, str):
+                            response = make_response(response)
+                            code = 200
                         else:
                             code = 200
                         response.headers["X-CSRF-TOKEN"] = CSRF_TOKEN
@@ -122,8 +129,11 @@ def CSRF_protect(endpoint):
             # CSRF-Compliant web client :D
             result : Response = endpoint(*args, **kwargs)
             if isinstance(result, tuple):
-                response = result[0]
+                response = result[0] if isinstance(result[0], Response) else make_response(result[0])
                 statusCode = result[1]
+            elif isinstance(result, str):
+                response = make_response(result)
+                statusCode = 200
             elif not result:
                 return make_response(), 500
             else:
