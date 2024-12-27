@@ -1,8 +1,7 @@
 document.addEventListener("DOMContentLoaded", async function(event){
-        cookie = localStorage.getItem("X-CSRF-TOKEN");
-        console.warn(cookie);
+        token = localStorage.getItem("X-CSRF-TOKEN");
 
-        if (!cookie){
+        if (!token){
             try{
                 const response = await fetch("http://192.168.0.105:8080/get-csrf", {
                     method : "GET",
