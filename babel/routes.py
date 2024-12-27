@@ -22,7 +22,6 @@ FILTER_PREFERENCES = {0 : "all", 1 : "translate", 2 : "transcribe"}
 @app.after_request
 def afterRequest(response):
     response.headers["Content-Security-Policy"] = app.config["CSP_STRING"]
-    print(response.headers)
     return response
 
 ### Error Handlers ###
@@ -187,6 +186,7 @@ def getUser(name):
     return jsonify(result), 200
 
 @app.route("/delete-account", methods = ["DELETE"])
+@CSRF_protect
 @enforce_mimetype("JSON")
 @token_required
 def delete_account():
@@ -293,6 +293,7 @@ def fetch_history():
     return resposne, 200
 
 @app.route("/transcript-speech", methods = ["POST"])
+@CSRF_protect
 @enforce_mimetype("form-data")
 @token_required
 def transcript_speech():
@@ -330,6 +331,7 @@ def transcript_speech():
     return jsonify({"text" : result["text"], "confidence" : result["confidence"], "time" : time_taken}), 200
 
 @app.route("/translate-text", methods = ["POST"])
+@CSRF_protect
 @enforce_mimetype("JSON")
 @token_required
 def translate_text():
