@@ -44,7 +44,6 @@ class AssemblyAI_Config:
         raise ValueError(f"ASSEMBLY-AI API KEY IS INVALID. MUST BE STRINCTLY ALPHA-NUMERIC, NOT {AAI_API_KEY}")
    
 #Translation
-print(os.path.join(CWD, os.environ["AVAILABLE_LANGUAGES"]))
 try:
     with open(os.path.join(CWD, os.environ["AVAILABLE_LANGUAGES"]), "r") as languages_filepath:
         AVAILABLE_LANGUAGES = json.load(languages_filepath)
