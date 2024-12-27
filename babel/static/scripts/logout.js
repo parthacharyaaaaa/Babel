@@ -15,7 +15,7 @@ document.addEventListener("DOMContentLoaded", function(event){
             if (!response.ok){
                 throw new Error(`${response.status}: ${response.statusText}`)
             }
-
+            localStorage.clear()
             alert("You have logged out successfully");
             window.location.href = "/";
 
