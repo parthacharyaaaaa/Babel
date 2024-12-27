@@ -8,7 +8,9 @@ document.addEventListener("DOMContentLoaded", async function(event) {
             const response = await fetch("/translate-text", {
                 method : "POST",
                 headers : {
-                    "Content-Type" : "application/json"
+                    "Content-Type" : "application/json",
+                    "X-CSRF-TOKEN" : localStorage.getItem("X-CSRF-TOKEN"),
+                    "X-CLIENT-TYPE" : "web"
                 },
                 body : JSON.stringify({text : original_text, src : src_lang, dest : dest_lang})
             });
@@ -18,6 +20,12 @@ document.addEventListener("DOMContentLoaded", async function(event) {
                 const statusText = response.statusText;
                 throw new Error(`Server Error. Status: ${statusCode} ${statusText}`);
             }
+
+            response.headers.forEach((key, value) => {
+                if ("/x-csrf-token/i".test(key)){
+                    localStorage.setItem("X-CSRF-TOKEN", value)
+                }
+            })
 
             const data = await response.json();
             let translated_textbox = document.getElementById("translated-text");

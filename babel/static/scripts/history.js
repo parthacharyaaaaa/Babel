@@ -4,7 +4,9 @@ async function getHistory(sortOption, filterOption, pageNumber = 1) {
             method: "GET",
             credentials: "include",
             headers: {
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+                "X-CSRF-TOKEN" : localStorage.getItem("X-CSRF-TOKEN"),
+                "X-CLIENT-TYPE" : "web"
             }
         });
 
@@ -12,6 +14,11 @@ async function getHistory(sortOption, filterOption, pageNumber = 1) {
             throw new Error(`${response.status}: ${response.statusText}. Failed to fetch history`);
         }
         isExhausted = response.headers.get("exhausted");
+        response.headers.forEach((key, value) => {
+            if ("/x-csrf-token/i".test(key)){
+                localStorage.setItem("X-CSRF-TOKEN", value)
+            }
+        })
         
         results = await response.json();
         const parent = document.querySelector(".history-list");

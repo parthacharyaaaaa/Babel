@@ -4,6 +4,7 @@ document.addEventListener("DOMContentLoaded", async function (event) {
             method: "GET",
             headers: {
                 "Content-Type": "application/json",
+                "X-CSRF-TOKEN" : localStorage.getItem("X-CSRF-TOKEN"),
                 "X-CLIENT-TYPE" : "web"
             }
         });
@@ -13,6 +14,12 @@ document.addEventListener("DOMContentLoaded", async function (event) {
             const statusText = response.statusText;
             throw new Error(`Failed to fetch available languages from server. Status: ${statusCode} ${statusText}`);
         }
+
+        response.headers.forEach((key, value) => {
+            if ("/x-csrf-token/i".test(key)){
+                localStorage.setItem("X-CSRF-TOKEN", value)
+            }
+        })
 
         const available_languages = await response.json();
         let languages_lists = document.querySelectorAll(".language-list");

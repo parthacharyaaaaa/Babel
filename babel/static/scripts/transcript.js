@@ -41,12 +41,22 @@ document.addEventListener("DOMContentLoaded", async function (event) {
             const response = await fetch("/transcript-speech", {
                 method: "POST",
                 body: audioForm,
-                credentials: "include"
+                credentials: "include",
+                headers : {
+                    "X-CSRF-TOKEN" : localStorage.getItem("X-CSRF-TOKEN"),
+                    "X-CLIENT-TYPE" : "web"
+                }
             });
 
             if (!response.ok) {
                 throw new Error(`An error occured in getting the transcript:\nStatus: ${response.status}\nMessage: ${response.statusText}`);
             }
+
+            response.headers.forEach((key, value) => {
+                if ("/x-csrf-token/i".test(key)){
+                    localStorage.setItem("X-CSRF-TOKEN", value)
+                }
+            })
 
             const data = await response.json();
             const transcript = data["text"];
