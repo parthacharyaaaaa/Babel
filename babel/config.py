@@ -17,7 +17,7 @@ class Flask_Config:
 
         # IP metadata
         VALID_PROXIES : list = os.environ["VALID_PROXIES"].split(",")
-        PRIVATE_IP_ADDRS : list = os.environ["PRIVATE_IP_ADDRS"].split(",")
+        PRIVATE_IP_ADDRS : list = os.environ["PRIVATE_COMM_IP"].split(",")
 
         # DB metadata
         SQLALCHEMY_DATABASE_URI = "sqlite:///" + os.path.join(CWD, os.environ["RS_DATABASE_URI"])
