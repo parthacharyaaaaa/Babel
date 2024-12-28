@@ -204,9 +204,11 @@ class TokenManager:
     def invalidateFamily(self, fID : str) -> None:
         '''Remove entire token family from revocation list and token store'''
         try:
-            self._TokenStore.delete(f"FID:{fID}")
-
-            self.decrementActiveTokens()
+            if self._TokenStore.get(f"FID:{fID}"):
+                self._TokenStore.delete(f"FID:{fID}")
+                self.decrementActiveTokens()
+            else:
+                print("No Family Found")
         except Exception as e:
             raise InternalServerError("Failed to perform operation on token store")
 
