@@ -16,8 +16,9 @@ import requests
 import orjson
 import zlib
 import traceback
+
+# in-memory 
 LANG_CACHE = None
-FILTER_PREFERENCES = {0 : "all", 1 : "translate", 2 : "transcribe"}
 
 @app.after_request
 def afterRequest(response):
@@ -216,10 +217,14 @@ def delete_account():
     except (DataError, StatementError):
         db.session.rollback()
         abort(500)
-
-    requests.delete(url=f"{app.config['AUTH_COMMUNICATION_PROTOCOL']}://{app.config['AUTH_SERVER_ORIGIN']}/delete-account",
-                headers={"refreshID" : decodedRToken["fid"], "AUTH-API-KEY" : os.environ["AUTH_API_KEY"]})
-    return jsonify({"message" : "Account Deleted Successfully"}), 204
+    for key in app.config["PRIVATE_COMM_KEYS"]:
+        try:
+            requests.delete(url=f"{app.config['AUTH_COMMUNICATION_PROTOCOL']}://{app.config['AUTH_SERVER_ORIGIN']}/delete-account",
+                        headers={"refreshID" : decodedRToken["fid"], "PRIVATE-API-KEY" : key})
+            return jsonify({"message" : "Account Deleted Successfully"}), 204
+        except:
+            continue
+    return jsonify({"message" : "There seems to be an issue on our auth server, but your account has been deleted succesfully"}), 204
 
 @app.route("/fetch-history", methods = ["GET"])
 @token_required

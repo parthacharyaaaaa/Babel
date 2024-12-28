@@ -70,14 +70,16 @@ def login():
     authentication_data = request.get_json(force=True, silent=False)
     if not ("identity" in authentication_data and "password" in authentication_data):
         raise BadRequest(f"POST /{request.root_path} expects identity and password in HTTP body")
-    
-    valid = requests.post(f"{auth.config['PROTOCOL']}://{auth.config['RESOURCE_SERVER_ORIGIN']}/validate-user",
-                          json = {"identity" : authentication_data["identity"], "password" : authentication_data["password"]},
-                          headers={"AUTH-API-KEY" : os.environ["AUTH_API_KEY"]})
-    
-    if valid.status_code != 200:
-        return jsonify({"message" : "Authentication Failed",
-                        "response_message" : valid.json().get("message", "None")}), valid.status_code
+    for key in auth.config["PRIVATE_COMM_KEYS"]:
+        valid = requests.post(f"{auth.config['PROTOCOL']}://{auth.config['RESOURCE_SERVER_ORIGIN']}/validate-user",
+                            json = {"identity" : authentication_data["identity"], "password" : authentication_data["password"]},
+                            headers={"PRIVATE-API-KEY" : key})
+        
+        if valid.status_code != 200:
+            return jsonify({"message" : "Authentication Failed",
+                            "response_message" : valid.json().get("message", "None")}), valid.status_code
+        
+        break
     
     subject = valid.json()["sub"]
     aToken = tokenManager.issueAccessToken(sub = subject)
@@ -130,13 +132,15 @@ def register():
         raise BadRequest("Passwords do not match")
     
     registrationDetails.update({"authprovider" : "babel-auth"})
-    valid = requests.post(f"{auth.config['PROTOCOL']}://{auth.config['RESOURCE_SERVER_ORIGIN']}/register",
-                          json = registrationDetails,
-                          headers={"AUTH-API-KEY" : os.environ["AUTH_API_KEY"]})
-    
-    if valid.status_code != 201:
-        return jsonify({"message" : "Failed to create account",
-                        "response_message" : valid.json().get("message", "Sowwy >:3")}), valid.status_code
+    for key in auth.config["PRIVATE_COMM_KEYS"]:
+        valid = requests.post(f"{auth.config['PROTOCOL']}://{auth.config['RESOURCE_SERVER_ORIGIN']}/register",
+                            json = registrationDetails,
+                            headers={"PRIVATE-API-KEY" : key})
+        
+        if valid.status_code != 201:
+            return jsonify({"message" : "Failed to create account",
+                            "response_message" : valid.json().get("message", "Sowwy >:3")}), valid.status_code
+        break
     
     subject = valid.json()["sub"]
     aToken = tokenManager.issueAccessToken(sub = subject)
