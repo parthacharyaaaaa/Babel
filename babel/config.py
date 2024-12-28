@@ -10,17 +10,29 @@ load_dotenv(os.path.join(CWD, ".env"), override=True)
 class Flask_Config:
     """Flask app configuration."""
     try:
+        # Security metadata
         SECRET_KEY = os.environ["SECRET_KEY"]
+        CSP_STRING = os.environ["CSP_STRING"] + f" connect-src 'self' {os.environ['AUTH_SERVER_ADDRESS']};"
+        PRIVATE_COMM_KEYS : list = os.environ["PRIVATE_COMM_KEYS"].split(",")
+
+        # IP metadata
+        VALID_PROXIES : list = os.environ["VALID_PROXIES"].split(",")
+        PRIVATE_IP_ADDRS : list = os.environ["PRIVATE_IP_ADDRS"].split(",")
+
+        # DB metadata
         SQLALCHEMY_DATABASE_URI = "sqlite:///" + os.path.join(CWD, os.environ["RS_DATABASE_URI"])
         TRACK_MODIFICATIONS = bool(os.environ.get("TRACK_MODIFICATIONS", False))
+
+        # Addressing metadata
         PORT = os.environ["PORT"]
         HOST = os.environ["HOST"]
-        PERMANENT_SESSION_LIFETIME = timedelta(days=int(os.environ["SESSION_LIFETIME"]))
+
+        # File I/O metadata
         UPLOAD_FOLDER = os.environ["UPLOAD_FOLDER"]
         MAX_CONTENT_LENGTH = int(os.environ["MAX_CONTENT_LENGTH"])
-        ERROR_LOG_FILE = os.path.join(CWD, os.environ["ERROR_LOG_FILE"])
 
-        CSP_STRING = os.environ["CSP_STRING"] + f" connect-src 'self' {os.environ['AUTH_SERVER_ADDRESS']};"
+        # Logging metadata
+        ERROR_LOG_FILE = os.path.join(CWD, os.environ["ERROR_LOG_FILE"])
 
         # Auth Server Communication Metadata
         AUTH_SERVER_ORIGIN = os.environ["AUTH_SERVER_ADDRESS"]
