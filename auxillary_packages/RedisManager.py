@@ -7,7 +7,7 @@ from redis.typing import ResponseT
 class Cache_Manager:
     def __init__(self, host : str, port : int, db : int, startup_mandate : bool = True, error_behavior : Literal["lax", "strict"] = "strict", **kwargs):
         try:
-            self._interface = Redis(host, int(port), int(db), kwargs)
+            self._interface = Redis(host, int(port), int(db), **kwargs)
             if startup_mandate and not self._interface.ping():
                 raise ConnectionError("Redis Connection could not be established")
             elif not (startup_mandate or self._interface.ping()):
