@@ -1,7 +1,7 @@
 from jwt import decode, PyJWTError, ExpiredSignatureError
-from flask import request, g, make_response, Response, jsonify
+from flask import request, g, make_response, Response, jsonify, current_app
 import os
-from werkzeug.exceptions import Unauthorized, BadRequest
+from werkzeug.exceptions import Unauthorized, BadRequest, InternalServerError
 from datetime import timedelta
 import functools
 import secrets, random
@@ -38,8 +38,21 @@ def token_required(endpoint):
 def private(endpoint):
     @functools.wraps(endpoint)
     def decorated(*args, **kwargs):
-        if request.headers.get("AUTH-API-KEY") != os.environ.get("AUTH_API_KEY", -1):
+        try:
+            # IP check
+            request_ip = request.headers.get("X-FORWARDED-FOR", request.remote_addr)
+            if request_ip not in current_app.config["PRIVATE_IP_ADDRS"]:
+                raise Unauthorized()
+            
+            # HTTP check
+            if request.headers["PRIVATE-API-KEY"] != current_app.config["PRIVATE_COMM_KEYS"]:
                raise Unauthorized("Access Denied >:(")
+            
+        except KeyError:
+               if not request.headers.get("PRIVATE-API-KEY"):
+                   raise Unauthorized("Private endpoint, requires an API key")
+               else:
+                   raise InternalServerError()
         return endpoint(*args, **kwargs)
     return decorated
 
