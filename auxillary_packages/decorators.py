@@ -41,11 +41,11 @@ def private(endpoint):
         try:
             # IP check
             request_ip = request.headers.get("X-FORWARDED-FOR", request.remote_addr)
-            if request_ip not in current_app.config["PRIVATE_IP_ADDRS"]:
+            if not (request_ip in current_app.config["PRIVATE_IP_ADDRS"]):
                 raise Unauthorized()
             
             # HTTP check
-            if request.headers["PRIVATE-API-KEY"] != current_app.config["PRIVATE_COMM_KEYS"]:
+            if not request.headers["PRIVATE-API-KEY"] in current_app.config["PRIVATE_COMM_KEYS"]:
                raise Unauthorized("Access Denied >:(")
             
         except KeyError:
