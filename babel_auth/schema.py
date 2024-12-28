@@ -1,7 +1,7 @@
 import jwt
 from typing import Optional, Literal
 from auxillary_packages.errors import Missing_Configuration_Error, TOKEN_STORE_INTEGRITY_ERROR
-from auxillary_packages.RedisManager import Cache_Manager
+from auxillary_packages.RedisManager import REDIS_MANAGER
 from werkzeug.exceptions import InternalServerError
 import os
 import uuid
@@ -45,7 +45,7 @@ class TokenManager:
         additonalHeaders (dict-like): Additional header information, universal to all tokens'''
 
         try:
-            self._TokenStore = Cache_Manager(os.environ["REDIS_HOST"],
+            self._TokenStore = REDIS_MANAGER(os.environ["REDIS_HOST"],
                              os.environ["REDIS_PORT"],
                              os.environ["REDIS_DB"])
             self.max_llen = max_tokens_per_fid

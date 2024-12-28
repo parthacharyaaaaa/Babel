@@ -4,7 +4,7 @@ from redis import Redis
 import redis.exceptions as RedisExceptions
 from redis.typing import ResponseT
 
-class Cache_Manager:
+class REDIS_MANAGER:
     def __init__(self, host : str, port : int, db : int, startup_mandate : bool = True, error_behavior : Literal["lax", "strict"] = "strict", **kwargs):
         try:
             self._interface = Redis(host, int(port), int(db), **kwargs)
